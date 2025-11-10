@@ -107,45 +107,51 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
 }
 
 export async function parseJobFromHTML(
-  htmlContent: string,
+  pageContent: string,
 ): Promise<JobDescription | null> {
   const genAI = initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  // Clean HTML to remove scripts and styles for better parsing
-  const cleanHTML = htmlContent
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "") // Remove HTML comments
-    .substring(0, 16000); // Limit to first 16k chars for API limits
+  // If content looks like HTML, clean it. Otherwise use as plain text
+  let cleanContent = pageContent;
+  if (pageContent.includes("<")) {
+    cleanContent = pageContent
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "") // Remove HTML comments
+      .replace(/<[^>]+>/g, " ") // Remove HTML tags, keep content
+      .replace(/\s+/g, " "); // Normalize whitespace
+  }
 
-  const prompt = `You are an expert at extracting job posting information from HTML pages.
+  cleanContent = cleanContent.substring(0, 16000); // Limit to first 16k chars for API limits
 
-  Analyze this HTML content and extract the job posting details. Be thorough in finding all job information, requirements, and skills.
+  const prompt = `You are an expert at extracting job posting information from web pages.
+
+  Analyze this page content and extract all job posting details. Look for sections like job title, company, location, description, requirements, and required skills.
 
   Return ONLY a valid JSON object (no markdown, no code blocks, just raw JSON) with this exact structure:
   {
     "title": "the job title or position name",
     "company": "the company name",
     "location": "location if available, or empty string",
-    "description": "the full job description and responsibilities",
-    "requirements": ["requirement or qualification 1", "requirement or qualification 2", "requirement or qualification 3"],
+    "description": "the full job description and responsibilities combined into one paragraph",
+    "requirements": ["requirement 1", "requirement 2", "requirement 3"],
     "skills": ["technical skill 1", "technical skill 2", "soft skill 1", "soft skill 2"]
   }
 
-  Guidelines:
-  - Extract the actual job title (not 'Job' or generic text)
-  - Find the company name from the page
-  - Include location if mentioned
-  - Combine all job description/responsibilities into one description field
-  - List key requirements and qualifications as an array
-  - Extract technical skills (programming languages, tools, frameworks) and soft skills
+  Instructions:
+  - Extract the actual job title (e.g., "Senior Software Engineer", not just "Job")
+  - Find and include the company or organization name
+  - Include location/city if mentioned anywhere
+  - Combine all job description and responsibilities into one description field
+  - Extract 3-5 key requirements and qualifications
+  - Extract 4-6 important skills (mix of technical and soft skills)
   - If information is not found, use empty string or empty array
-  - Return only the JSON object, nothing else
-  - Make sure to extract the most relevant job description from the page
+  - Return ONLY the JSON object, nothing else - no markdown, no extra text
+  - Be very literal in extracting actual text from the page
 
-  HTML Content to parse:
-  ${cleanHTML}`;
+  Page Content to analyze:
+  ${cleanContent}`;
 
   try {
     console.log(
