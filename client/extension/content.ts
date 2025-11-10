@@ -101,19 +101,43 @@ function getEnrichedPageContent(): string {
   const title = document.title;
   if (title) parts.push(`Page Title: ${title}`);
 
-  // Get main headings
-  document.querySelectorAll("h1, h2, h3").forEach((el) => {
-    if (el.textContent) parts.push(el.textContent.trim());
-  });
+  // Get all visible text from page (this is what Gemini will analyze)
+  const pageText = document.body.innerText || "";
 
-  // Get main content areas
-  const mainContent = document.querySelector("main, article, [role='main']");
-  if (mainContent?.textContent) {
-    parts.push(mainContent.textContent);
-  } else {
-    // Fallback to body text
-    parts.push(document.body.innerText);
+  // Get specific job-related sections
+  const jobSectionSelectors = [
+    ".job-description",
+    "[class*='description']",
+    "[class*='job']",
+    "main",
+    "article",
+    "[role='main']",
+    ".job-post",
+    ".posting",
+    ".position",
+  ];
+
+  let jobContent = "";
+  for (const selector of jobSectionSelectors) {
+    const el = document.querySelector(selector);
+    if (el?.textContent && el.textContent.length > 100) {
+      jobContent = el.textContent;
+      break;
+    }
   }
+
+  // Combine content
+  if (jobContent && jobContent.length > 100) {
+    parts.push(jobContent);
+  } else if (pageText && pageText.length > 100) {
+    parts.push(pageText);
+  }
+
+  // Add meta information
+  const url = window.location.href;
+  const hostname = window.location.hostname;
+  if (url) parts.push(`URL: ${url}`);
+  if (hostname) parts.push(`Site: ${hostname}`);
 
   return parts.join("\n\n");
 }
