@@ -23,9 +23,85 @@ function initGemini(): GoogleGenerativeAI {
   return client;
 }
 
+export async function isJobPostingPage(
+  htmlContent: string,
+): Promise<boolean> {
+  const genAI = initGemini();
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  // Clean HTML to remove scripts and styles
+  const cleanHTML = htmlContent
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .substring(0, 12000); // Limit to first 12k chars for API limits
+
+  const prompt = `Analyze this HTML page and determine if it contains a job posting.
+
+  Look for indicators such as:
+  - Job title, position name, or role
+  - Company name
+  - Job description or responsibilities
+  - Requirements or qualifications
+  - Salary, location, or employment type
+  - Keywords like "apply", "apply now", "join us", "hiring"
+
+  Return ONLY a valid JSON object with:
+  {
+    "isJobPosting": true or false,
+    "confidence": number between 0-1 (how confident you are)
+  }
+
+  Only return "true" if this is clearly a job posting page. Return "false" for:
+  - Job listing aggregator pages (showing multiple jobs)
+  - Company career pages listing many jobs
+  - Non-job pages that mention jobs
+  - Generic pages
+
+  Return only the JSON object, nothing else.
+
+  HTML Content:
+  ${cleanHTML}`;
+
+  try {
+    console.log(
+      "[isJobPostingPage] Checking if page is a job posting...",
+      cleanHTML.length,
+      "chars",
+    );
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+
+    console.log("[isJobPostingPage] Gemini response:", text.substring(0, 200));
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        console.error("[isJobPostingPage] No JSON found in response");
+        return false;
+      }
+    }
+
+    const isPosting = Boolean(parsed.isJobPosting);
+    const confidence = parsed.confidence || 0;
+    console.log(
+      `[isJobPostingPage] Result: ${isPosting} (confidence: ${confidence})`,
+    );
+    return isPosting;
+  } catch (error) {
+    console.error("[isJobPostingPage] Error detecting job posting:", error);
+    return false;
+  }
+}
+
 export async function parseJobFromHTML(
   htmlContent: string,
-): Promise<JobDescription> {
+): Promise<JobDescription | null> {
   const genAI = initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -66,14 +142,17 @@ export async function parseJobFromHTML(
 
   try {
     console.log(
-      "Sending HTML to Gemini for parsing...",
+      "[parseJobFromHTML] Sending HTML to Gemini for parsing...",
       cleanHTML.length,
       "chars",
     );
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    console.log("Gemini response for job parsing:", text.substring(0, 300));
+    console.log(
+      "[parseJobFromHTML] Gemini response:",
+      text.substring(0, 300),
+    );
 
     // Try to extract JSON from response
     let parsed;
@@ -88,19 +167,32 @@ export async function parseJobFromHTML(
         try {
           parsed = JSON.parse(jsonMatch[0]);
         } catch (innerE) {
-          console.error("Failed to parse extracted JSON:", innerE);
-          throw new Error("No valid JSON found in response");
+          console.error("[parseJobFromHTML] Failed to parse extracted JSON:", innerE);
+          return null;
         }
       } else {
-        throw new Error("No JSON found in response");
+        console.error("[parseJobFromHTML] No JSON found in response");
+        return null;
       }
     }
 
+    // Validate that we have meaningful job data
+    const title = (parsed.title || "").trim();
+    const description = (parsed.description || "").trim();
+
+    // If no title or description, it's likely not a valid job posting
+    if (!title || !description || title === "Unknown Position" || description.length < 50) {
+      console.log(
+        "[parseJobFromHTML] Parsed data looks incomplete - likely not a job posting",
+      );
+      return null;
+    }
+
     const result_obj: JobDescription = {
-      title: (parsed.title || "Unknown Position").trim(),
+      title: title,
       company: (parsed.company || "Unknown Company").trim(),
       location: (parsed.location || "").trim(),
-      description: (parsed.description || "").trim(),
+      description: description,
       requirements: Array.isArray(parsed.requirements)
         ? parsed.requirements
             .filter((r: string) => r && r.trim())
@@ -115,36 +207,15 @@ export async function parseJobFromHTML(
     };
 
     console.log(
-      "Successfully parsed job description:",
+      "[parseJobFromHTML] Successfully parsed job description:",
       result_obj.title,
       "at",
       result_obj.company,
     );
     return result_obj;
   } catch (error) {
-    console.error("Error parsing job from HTML:", error);
-
-    // Extract text content from HTML as fallback
-    const textContent = htmlContent
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .substring(0, 2000);
-
-    console.log(
-      "Using fallback text extraction:",
-      textContent.substring(0, 100),
-    );
-
-    return {
-      title: "Job Position",
-      company: "Company",
-      location: "",
-      description: textContent,
-      requirements: [],
-      skills: [],
-      extractedAt: new Date(),
-    };
+    console.error("[parseJobFromHTML] Error parsing job from HTML:", error);
+    return null;
   }
 }
 
