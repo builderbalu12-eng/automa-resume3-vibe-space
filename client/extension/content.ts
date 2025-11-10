@@ -169,82 +169,61 @@ function injectButton() {
     button.textContent = "⏳ Analyzing...";
     button.disabled = true;
 
-    // Capture the page with enriched content
-    const pageURL = window.location.href;
-    const enrichedContent = getEnrichedPageContent();
-
-    // Also try to extract basic info from DOM as fallback
-    const basicJobData = extractJobDescriptionFromDOM();
-
-    // Save page content to storage for the popup to access
     try {
-      // Use enriched content for better analysis, but respect storage limits
-      // Chrome storage sync has ~100KB quota per extension, 8KB per item
-      // We'll store the enriched content (shorter) instead of full HTML
-      const maxContentLength = 10000; // Stay well under the 8KB per-item limit
-      const contentToStore = enrichedContent.substring(0, maxContentLength);
+      // Capture the full page HTML
+      const pageHTML = document.documentElement.outerHTML;
+      const pageURL = window.location.href;
 
       console.log(
-        "[Content Script] Enriched content length:",
-        contentToStore.length,
+        "[Content Script] Captured page HTML, length:",
+        pageHTML.length,
       );
 
-      // Store limited data to avoid exceeding chrome.storage.sync quota
-      const dataToStore: Record<string, any> = {
-        currentPageText: contentToStore,
-        currentPageURL: pageURL,
-        currentPageAnalyzedAt: new Date().toISOString(),
-      };
+      // Send HTML directly to popup via message (don't store anything)
+      chrome.runtime.sendMessage(
+        {
+          action: "analyzeJob",
+          pageHTML: pageHTML,
+          pageURL: pageURL,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Content Script] Message send error:",
+              chrome.runtime.lastError.message,
+            );
+            alert(
+              `Error: ${chrome.runtime.lastError.message}. Please try again.`,
+            );
+            button.textContent = "Analyse";
+            button.disabled = false;
+          } else if (response?.success) {
+            console.log("[Content Script] Popup received HTML successfully");
+            // Show success feedback
+            button.textContent = "✓ Analyzed! Opening...";
+            button.style.background =
+              "linear-gradient(135deg, #10b981 0%, #059669 100%)";
 
-      // Only include basicJobData if we have it (it's already small)
-      if (basicJobData) {
-        dataToStore["currentJobData"] = basicJobData;
-        console.log("[Content Script] DOM extraction found:", {
-          title: basicJobData.title,
-          company: basicJobData.company,
-        });
-      }
-
-      // Store in chrome.storage.sync for extension context
-      await new Promise<void>((resolve, reject) => {
-        if (chrome.storage && chrome.storage.sync) {
-          chrome.storage.sync.set(dataToStore, () => {
-            if (chrome.runtime.lastError) {
-              reject(chrome.runtime.lastError);
-            } else {
-              resolve();
-            }
-          });
-        } else {
-          reject(new Error("Chrome storage not available"));
-        }
-      });
-
-      console.log("[Content Script] Page data saved to chrome.storage.sync");
-      console.log(
-        "[Content Script] Content will be sent to Gemini for analysis",
+            // Reset button after a delay
+            setTimeout(() => {
+              button.textContent = "Analyse";
+              button.disabled = false;
+              button.style.background =
+                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+            }, 2000);
+          } else {
+            console.error(
+              "[Content Script] Popup did not process HTML:",
+              response,
+            );
+            alert("Failed to process page. Please try again.");
+            button.textContent = "Analyse";
+            button.disabled = false;
+          }
+        },
       );
-      console.log("[Content Script] URL:", pageURL);
-
-      // Show success feedback
-      button.textContent = "✓ Analyzed! Opening...";
-      button.style.background =
-        "linear-gradient(135deg, #10b981 0%, #059669 100%)";
-
-      // Open the popup
-      chrome.runtime.sendMessage({ action: "openPopup" }).catch((err) => {
-        console.log("Popup message sent:", err?.message || "success");
-      });
-
-      // Reset button after a delay
-      setTimeout(() => {
-        button.textContent = "Analyse";
-        button.disabled = false;
-        button.style.background =
-          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-      }, 2000);
     } catch (error) {
-      console.error("[Content Script] Error saving page data:", error);
+      console.error("[Content Script] Error analyzing page:", error);
       alert(
         `Failed to analyze page: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
