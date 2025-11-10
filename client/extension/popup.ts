@@ -201,11 +201,13 @@ async function init() {
     if (pageText && pageText.length > 0) {
       try {
         console.log("[Popup] Checking if page is a job posting...");
-        // Convert text to simple HTML format for Gemini analysis
-        const htmlContent = `<html><body>${pageText.substring(0, 10000).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</body></html>`;
+
+        // Pass plain text directly to Gemini (don't HTML-escape it)
+        // The Gemini functions will handle plain text analysis
+        const pageContent = pageText.substring(0, 16000);
 
         // First, check if this page actually contains a job posting
-        const isJobPosting = await isJobPostingPage(htmlContent);
+        const isJobPosting = await isJobPostingPage(pageContent);
 
         if (isJobPosting) {
           console.log(
