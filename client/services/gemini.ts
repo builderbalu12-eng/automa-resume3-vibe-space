@@ -46,19 +46,25 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
     "job posting",
     "job description",
     "job title",
+    "job for you",
     "responsibilities",
     "requirements",
     "qualifications",
     "apply now",
+    "apply here",
     "position",
     "role",
-    "software engineer",
-    "data scientist",
-    "product manager",
     "hiring",
+    "we are hiring",
     "open position",
     "experience required",
     "skills needed",
+    "salary",
+    "location",
+    "required skills",
+    "nice to have",
+    "about the job",
+    "about the role",
   ];
 
   const keywordMatches = jobKeywords.filter((kw) =>
@@ -66,7 +72,8 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
   ).length;
 
   // If very few keyword matches, likely not a job posting
-  if (keywordMatches < 2 && !lowerContent.includes("job")) {
+  // Be lenient - Naukri and other sites may use different keywords
+  if (keywordMatches < 1 && !lowerContent.includes("job")) {
     console.log(
       "[isJobPostingPage] Fast filter detected non-job page (keyword matches:",
       keywordMatches,
@@ -151,19 +158,19 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
       }
     }
 
-    console.log("[isJobPostingPage] Result:", isPosting);
+    console.log("[isJobPostingPage] Result:", isPosting, "(keywords:", keywordMatches, ")");
     return isPosting;
   } catch (error) {
     console.error("[isJobPostingPage] Error detecting job posting:", error);
     if (error instanceof Error) {
       console.error("[isJobPostingPage] Error message:", error.message);
     }
-    // Fallback: use keyword-based detection
+    // Fallback: use keyword-based detection - be lenient
     console.log(
       "[isJobPostingPage] Using keyword fallback, matches:",
       keywordMatches,
     );
-    return keywordMatches >= 3;
+    return keywordMatches >= 2;
   }
 }
 
