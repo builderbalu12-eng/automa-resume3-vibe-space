@@ -175,33 +175,31 @@ export async function parseJobFromHTML(
 
   cleanContent = cleanContent.substring(0, 16000); // Limit to first 16k chars for API limits
 
-  const prompt = `You are an expert at extracting job posting information from web pages.
+  const prompt = `Extract job posting information from this page content.
 
-  Analyze this page content and extract all job posting details. Look for sections like job title, company, location, description, requirements, and required skills.
+Return valid JSON with this structure:
+{
+  "title": "job title or position name",
+  "company": "company or organization name",
+  "location": "location if available",
+  "description": "job description and responsibilities combined",
+  "requirements": ["requirement 1", "requirement 2"],
+  "skills": ["skill 1", "skill 2"]
+}
 
-  Return ONLY a valid JSON object (no markdown, no code blocks, just raw JSON) with this exact structure:
-  {
-    "title": "the job title or position name",
-    "company": "the company name",
-    "location": "location if available, or empty string",
-    "description": "the full job description and responsibilities combined into one paragraph",
-    "requirements": ["requirement 1", "requirement 2", "requirement 3"],
-    "skills": ["technical skill 1", "technical skill 2", "soft skill 1", "soft skill 2"]
-  }
+Instructions:
+- Extract actual job title (e.g., "Senior Software Engineer")
+- Find company name or organization
+- Include location if mentioned
+- Combine description and responsibilities
+- Extract 3+ key requirements
+- Extract 3+ important skills
 
-  Instructions:
-  - Extract the actual job title (e.g., "Senior Software Engineer", not just "Job")
-  - Find and include the company or organization name
-  - Include location/city if mentioned anywhere
-  - Combine all job description and responsibilities into one description field
-  - Extract 3-5 key requirements and qualifications
-  - Extract 4-6 important skills (mix of technical and soft skills)
-  - If information is not found, use empty string or empty array
-  - Return ONLY the JSON object, nothing else - no markdown, no extra text
-  - Be very literal in extracting actual text from the page
+If information is missing, use empty strings or arrays.
+Return ONLY raw JSON, no markdown or extra text.
 
-  Page Content to analyze:
-  ${cleanContent}`;
+Page Content:
+${cleanContent}`;
 
   try {
     console.log(
