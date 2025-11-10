@@ -175,43 +175,46 @@ async function init() {
     state.masterResume = resume;
 
     // Get job data from storage (captured by content script when Analyse button was clicked)
-    let pageHTML: string | null = null;
+    let pageText: string | null = null;
     let basicJobData: JobDescription | null = null;
 
     try {
-      pageHTML = await getFromStorageSync("currentPageHTML");
+      pageText = await getFromStorageSync("currentPageText");
       console.log(
-        "Page HTML retrieved:",
-        pageHTML ? `${pageHTML.length} chars` : "None",
+        "[Popup] Page text retrieved:",
+        pageText ? `${pageText.length} chars` : "None",
       );
     } catch (e) {
-      console.warn("Could not get page HTML:", e);
+      console.warn("[Popup] Could not get page text:", e);
     }
 
     try {
       basicJobData = await getFromStorageSync("currentJobData");
-      console.log("Basic job data retrieved:", basicJobData ? "Yes" : "No");
+      console.log("[Popup] Basic job data retrieved:", basicJobData ? "Yes" : "No");
     } catch (e) {
-      console.warn("Could not get job data:", e);
+      console.warn("[Popup] Could not get job data:", e);
     }
 
-    if (pageHTML) {
+    if (pageText && pageText.length > 0) {
       try {
         console.log("[Popup] Checking if page is a job posting...");
+        // Convert text to simple HTML format for Gemini analysis
+        const htmlContent = `<html><body>${pageText.substring(0, 10000).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</body></html>`;
+
         // First, check if this page actually contains a job posting
-        const isJobPosting = await isJobPostingPage(pageHTML);
+        const isJobPosting = await isJobPostingPage(htmlContent);
 
         if (isJobPosting) {
           console.log(
             "[Popup] Page detected as job posting. Parsing details...",
           );
-          // Parse HTML using Gemini to extract job details
-          const parsedJobData = await parseJobFromHTML(pageHTML);
+          // Parse using Gemini to extract job details
+          const parsedJobData = await parseJobFromHTML(htmlContent);
 
           if (parsedJobData) {
             state.jobData = parsedJobData;
             console.log(
-              "[Popup] Successfully parsed job data from HTML:",
+              "[Popup] Successfully parsed job data from page:",
               state.jobData.title,
             );
           } else {
@@ -251,11 +254,11 @@ async function init() {
         }
       }
     } else if (basicJobData) {
-      // Fallback if no HTML was captured
+      // Fallback if no page text was captured
       state.jobData = basicJobData;
       console.log("[Popup] Using basic job data from content script");
     } else {
-      console.log("[Popup] No job data or HTML found in storage");
+      console.log("[Popup] No job data or page text found in storage");
     }
 
     updateUI();
