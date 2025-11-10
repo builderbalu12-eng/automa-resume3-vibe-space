@@ -73,13 +73,24 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
   try {
     console.log(
       "[isJobPostingPage] Checking if page is a job posting...",
-      cleanHTML.length,
+      cleanContent.length,
       "chars",
     );
+
+    if (!cleanContent || cleanContent.trim().length === 0) {
+      console.warn("[isJobPostingPage] Empty content provided");
+      return false;
+    }
+
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
     console.log("[isJobPostingPage] Gemini response:", text.substring(0, 200));
+
+    if (!text) {
+      console.error("[isJobPostingPage] Empty response from Gemini");
+      return false;
+    }
 
     let parsed;
     try {
@@ -87,9 +98,15 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
     } catch (e) {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
+        try {
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch (innerError) {
+          console.error("[isJobPostingPage] Failed to parse JSON:", innerError);
+          console.error("[isJobPostingPage] Response was:", text.substring(0, 500));
+          return false;
+        }
       } else {
-        console.error("[isJobPostingPage] No JSON found in response");
+        console.error("[isJobPostingPage] No JSON found in response:", text.substring(0, 500));
         return false;
       }
     }
@@ -102,6 +119,9 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
     return isPosting;
   } catch (error) {
     console.error("[isJobPostingPage] Error detecting job posting:", error);
+    if (error instanceof Error) {
+      console.error("[isJobPostingPage] Error message:", error.message);
+    }
     return false;
   }
 }
