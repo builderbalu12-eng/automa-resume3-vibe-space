@@ -201,20 +201,23 @@ async function init() {
     if (pageText && pageText.length > 0) {
       try {
         console.log("[Popup] Checking if page is a job posting...");
+        console.log("[Popup] Page content length:", pageText.length);
+        console.log("[Popup] Page content preview:", pageText.substring(0, 200));
 
-        // Pass plain text directly to Gemini (don't HTML-escape it)
-        // The Gemini functions will handle plain text analysis
+        // Pass content directly to Gemini
+        // The Gemini functions will handle both HTML and plain text analysis
         const pageContent = pageText.substring(0, 16000);
 
         // First, check if this page actually contains a job posting
         const isJobPosting = await isJobPostingPage(pageContent);
+        console.log("[Popup] isJobPosting result:", isJobPosting);
 
         if (isJobPosting) {
           console.log(
             "[Popup] Page detected as job posting. Parsing details...",
           );
           // Parse using Gemini to extract job details
-          const parsedJobData = await parseJobFromHTML(htmlContent);
+          const parsedJobData = await parseJobFromHTML(pageContent);
 
           if (parsedJobData) {
             state.jobData = parsedJobData;
