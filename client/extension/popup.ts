@@ -186,41 +186,71 @@ function updateUI() {
     statusText.innerHTML =
       "<strong>No Master Resume</strong><span>Upload your resume on the dashboard first</span>";
 
-    dashboardLink.onclick = (e) => {
-      e.preventDefault();
-      chrome.tabs.create({
-        url: chrome.runtime.getURL("../index.html"),
-      });
-    };
+    if (dashboardLink) {
+      dashboardLink.onclick = (e) => {
+        e.preventDefault();
+        chrome.tabs.create({
+          url: chrome.runtime.getURL("../index.html"),
+        });
+      };
+    }
     return;
   }
 
-  // Show job info if available
-  if (state.jobData) {
+  // If page HTML was received but not analyzed yet
+  if (state.pageHTML && !state.jobData) {
+    statusEl.classList.remove("hidden");
+    const statusIcon = statusEl.querySelector(".status-icon")!;
+    const statusText = statusEl.querySelector(".status-text")!;
+    statusIcon.textContent = "📄";
+    statusText.innerHTML =
+      "<strong>Job Posting Detected</strong><span>Click below to analyze and tailor your resume</span>";
+
+    buttonsEl.classList.remove("hidden");
+    // Show tailor button
+    if (tailorBtn) {
+      tailorBtn.textContent = "⚡ Analyze & Tailor Resume";
+      tailorBtn.disabled = false;
+    }
+    return;
+  }
+
+  // Show results if job has been analyzed
+  if (state.jobData && state.tailoredResume && state.atsScore) {
+    statusEl.classList.remove("hidden");
+    const statusIcon = statusEl.querySelector(".status-icon")!;
+    const statusText = statusEl.querySelector(".status-text")!;
+    statusIcon.textContent = "✅";
+    statusText.innerHTML = `<strong>Resume Tailored</strong><span>${state.jobData.title} at ${state.jobData.company}</span>`;
+
     jobInfoEl.classList.remove("hidden");
     const jobTitleEl = document.getElementById("job-title");
     const jobCompanyEl = document.getElementById("job-company");
+    const atsScoreEl = document.getElementById("ats-score");
+    const summaryEl = document.getElementById("summary");
+
     if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
     if (jobCompanyEl)
       jobCompanyEl.textContent = state.jobData.company || "Unknown";
+    if (atsScoreEl)
+      atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
+    if (summaryEl) summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
 
-    // Show buttons
     buttonsEl.classList.remove("hidden");
-    statusEl.classList.remove("hidden");
-    const statusIcon = statusEl.querySelector(".status-icon")!;
-    const statusText = statusEl.querySelector(".status-text")!;
-    statusIcon.textContent = "✓";
-    statusText.innerHTML =
-      "<strong>Ready to Tailor</strong><span>Click below to optimize your resume for this job</span>";
-  } else {
-    // Show status for non-job pages
-    statusEl.classList.remove("hidden");
-    const statusIcon = statusEl.querySelector(".status-icon")!;
-    const statusText = statusEl.querySelector(".status-text")!;
-    statusIcon.textContent = "ℹ️";
-    statusText.innerHTML =
-      "<strong>No Job Posting Found</strong><span>Open this extension on a job posting page</span>";
+    // Show download button
+    if (downloadBtn) {
+      downloadBtn.disabled = false;
+    }
+    return;
   }
+
+  // Default: no job posting
+  statusEl.classList.remove("hidden");
+  const statusIcon = statusEl.querySelector(".status-icon")!;
+  const statusText = statusEl.querySelector(".status-text")!;
+  statusIcon.textContent = "ℹ️";
+  statusText.innerHTML =
+    "<strong>No Job Posting Found</strong><span>Open this extension on a job posting page</span>";
 }
 
 tailorBtn.addEventListener("click", async () => {
