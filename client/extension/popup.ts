@@ -232,9 +232,9 @@ function updateUI() {
     if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
     if (jobCompanyEl)
       jobCompanyEl.textContent = state.jobData.company || "Unknown";
-    if (atsScoreEl)
-      atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
-    if (summaryEl) summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
+    if (atsScoreEl) atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
+    if (summaryEl)
+      summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
 
     buttonsEl.classList.remove("hidden");
     // Show download button

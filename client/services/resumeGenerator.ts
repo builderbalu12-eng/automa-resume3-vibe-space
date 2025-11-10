@@ -311,9 +311,7 @@ export async function generateResumeDocx(
   return buffer;
 }
 
-export async function generateResumePDF(
-  resume: ResumeData,
-): Promise<Blob> {
+export async function generateResumePDF(resume: ResumeData): Promise<Blob> {
   const { contact, summary, skills, experience, education } = resume;
 
   // Build HTML content for the resume
@@ -357,9 +355,7 @@ export async function generateResumePDF(
           <div class="company">${exp.company}</div>
           <div class="duration">${dateRange}</div>
           <ul class="job-bullets">
-            ${exp.description
-              .map((desc) => `<li>${desc}</li>`)
-              .join("")}
+            ${exp.description.map((desc) => `<li>${desc}</li>`).join("")}
           </ul>
         </div>
       `;

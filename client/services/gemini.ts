@@ -788,7 +788,10 @@ Return ONLY valid JSON (no markdown, no explanations):
     // Build ATS score
     const atsScore: ATSScore = {
       score: Math.min(100, Math.max(0, parsed.atsScore || 0)),
-      matchPercentage: Math.min(100, Math.max(0, parsed.atsMatchPercentage || 0)),
+      matchPercentage: Math.min(
+        100,
+        Math.max(0, parsed.atsMatchPercentage || 0),
+      ),
       keywordMatches: (Array.isArray(parsed.matchedKeywords)
         ? parsed.matchedKeywords
         : []
@@ -803,7 +806,9 @@ Return ONLY valid JSON (no markdown, no explanations):
       ).filter((i: string) => i && i.trim()),
     };
 
-    const summary = parsed.jobSummary || `Match: ${atsScore.score}% for ${jobData.title} at ${jobData.company}`;
+    const summary =
+      parsed.jobSummary ||
+      `Match: ${atsScore.score}% for ${jobData.title} at ${jobData.company}`;
 
     return {
       jobData,
