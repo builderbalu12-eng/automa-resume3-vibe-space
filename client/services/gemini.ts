@@ -23,26 +23,34 @@ function initGemini(): GoogleGenerativeAI {
   return client;
 }
 
-export async function isJobPostingPage(htmlContent: string): Promise<boolean> {
+export async function isJobPostingPage(pageContent: string): Promise<boolean> {
   const genAI = initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  // Clean HTML to remove scripts and styles
-  const cleanHTML = htmlContent
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .substring(0, 12000); // Limit to first 12k chars for API limits
+  // If content looks like HTML, clean it. Otherwise use as plain text
+  let cleanContent = pageContent;
+  if (pageContent.includes("<")) {
+    cleanContent = pageContent
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<[^>]+>/g, " ") // Remove HTML tags, keep content
+      .replace(/\s+/g, " "); // Normalize whitespace
+  }
 
-  const prompt = `Analyze this HTML page and determine if it contains a job posting.
+  cleanContent = cleanContent.substring(0, 12000); // Limit to first 12k chars for API limits
+
+  const prompt = `Analyze this page content and determine if it contains a job posting.
 
   Look for indicators such as:
-  - Job title, position name, or role
-  - Company name
-  - Job description or responsibilities
-  - Requirements or qualifications
-  - Salary, location, or employment type
-  - Keywords like "apply", "apply now", "join us", "hiring"
+  - Job title, position name, or role (like "Software Engineer", "Data Scientist", "Product Manager")
+  - Company name or organization
+  - Job description or detailed responsibilities section
+  - Requirements or qualifications section
+  - Salary, location, or employment type information
+  - Keywords like "apply", "apply now", "join us", "hiring", "open position", "we're hiring"
+  - Benefits or job details section
+  - Experience level required
 
   Return ONLY a valid JSON object with:
   {
@@ -50,16 +58,17 @@ export async function isJobPostingPage(htmlContent: string): Promise<boolean> {
     "confidence": number between 0-1 (how confident you are)
   }
 
-  Only return "true" if this is clearly a job posting page. Return "false" for:
+  Only return "true" if this is clearly a single job posting page with actual job details. Return "false" for:
   - Job listing aggregator pages (showing multiple jobs)
   - Company career pages listing many jobs
   - Non-job pages that mention jobs
+  - Blog posts or articles about jobs
   - Generic pages
 
   Return only the JSON object, nothing else.
 
-  HTML Content:
-  ${cleanHTML}`;
+  Page Content:
+  ${cleanContent}`;
 
   try {
     console.log(
