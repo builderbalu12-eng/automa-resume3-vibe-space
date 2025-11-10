@@ -129,22 +129,25 @@ function injectButton() {
     button.textContent = "⏳ Analyzing...";
     button.disabled = true;
 
-    // Capture the page
-    const pageHTML = getPageHTML();
-    const pageText = getPageText();
+    // Capture the page with enriched content
     const pageURL = window.location.href;
+    const enrichedContent = getEnrichedPageContent();
+    const pageText = getPageText();
 
     // Also try to extract basic info from DOM as fallback
     const basicJobData = extractJobDescriptionFromDOM();
 
     // Save page content to storage for the popup to access
     try {
-      // Limit page text to 50KB to avoid quota exceeded errors (Chrome limit is 8KB per item)
-      const truncatedPageText = pageText.substring(0, 50000);
+      // Use enriched content for better analysis, but respect storage limits
+      // Chrome storage sync has ~100KB quota per extension, 8KB per item
+      // We'll store the enriched content (shorter) instead of full HTML
+      const maxContentLength = 8000; // Stay well under the 8KB per-item limit
+      const contentToStore = enrichedContent.substring(0, maxContentLength);
 
-      // Store limited data to avoid exceeding chrome.storage.sync quota (8KB per item)
+      // Store limited data to avoid exceeding chrome.storage.sync quota
       const dataToStore: Record<string, any> = {
-        currentPageText: truncatedPageText,
+        currentPageText: contentToStore,
         currentPageURL: pageURL,
         currentPageAnalyzedAt: new Date().toISOString(),
       };
@@ -171,9 +174,10 @@ function injectButton() {
 
       console.log("[Content Script] Page data saved to chrome.storage.sync");
       console.log(
-        "[Content Script] Page text length:",
-        truncatedPageText.length,
+        "[Content Script] Content length:",
+        contentToStore.length,
       );
+      console.log("[Content Script] URL:", pageURL);
       console.log("[Content Script] Basic job data extracted:", basicJobData);
 
       // Show success feedback
