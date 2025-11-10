@@ -311,6 +311,77 @@ export async function generateResumeDocx(
   return buffer;
 }
 
+export async function generateResumePDF(
+  resume: ResumeData,
+): Promise<Blob> {
+  const { contact, summary, skills, experience, education } = resume;
+
+  // Build HTML content for the resume
+  let htmlContent = `
+    <h1>${contact.name}</h1>
+    <div class="contact">
+      ${contact.email ? `${contact.email}` : ""}
+      ${contact.phone ? ` • ${contact.phone}` : ""}
+      ${contact.location ? ` • ${contact.location}` : ""}
+      ${contact.linkedin ? ` • ${contact.linkedin}` : ""}
+    </div>
+  `;
+
+  if (summary?.trim()) {
+    htmlContent += `
+      <h2>Professional Summary</h2>
+      <div class="section">${summary}</div>
+    `;
+  }
+
+  if (skills && skills.length > 0) {
+    htmlContent += `
+      <h2>Skills</h2>
+      <div class="skills section">
+        ${skills.map((skill) => `<span>${skill}</span>`).join("")}
+      </div>
+    `;
+  }
+
+  if (experience && experience.length > 0) {
+    htmlContent += `<h2>Professional Experience</h2>`;
+    experience.forEach((exp) => {
+      const dateRange =
+        exp.endDate && !exp.isCurrentlyWorking
+          ? `${exp.startDate} – ${exp.endDate}`
+          : `${exp.startDate} – Present`;
+
+      htmlContent += `
+        <div class="job">
+          <div class="job-title">${exp.title}</div>
+          <div class="company">${exp.company}</div>
+          <div class="duration">${dateRange}</div>
+          <ul class="job-bullets">
+            ${exp.description
+              .map((desc) => `<li>${desc}</li>`)
+              .join("")}
+          </ul>
+        </div>
+      `;
+    });
+  }
+
+  if (education && education.length > 0) {
+    htmlContent += `<h2>Education</h2>`;
+    education.forEach((edu) => {
+      htmlContent += `
+        <div class="education">
+          <div class="degree">${edu.degree} in ${edu.field}</div>
+          <div class="institution">${edu.institution}</div>
+          <div class="duration">Graduated: ${edu.graduationDate}</div>
+        </div>
+      `;
+    });
+  }
+
+  return await generatePDFFromHTML(htmlContent);
+}
+
 export async function downloadResume(
   resume: ResumeData,
   company: string,
@@ -322,6 +393,23 @@ export async function downloadResume(
   const today = new Date().toISOString().split("T")[0];
   a.href = url;
   a.download = `Resume_${company}_${jobTitle}_${today}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadResumePDF(
+  resume: ResumeData,
+  company: string,
+  jobTitle: string,
+): Promise<void> {
+  const blob = await generateResumePDF(resume);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const today = new Date().toISOString().split("T")[0];
+  a.href = url;
+  a.download = `Resume_${company}_${jobTitle}_${today}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
