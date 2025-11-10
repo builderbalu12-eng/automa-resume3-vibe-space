@@ -50,37 +50,6 @@ console.log("[Popup] DOM elements found:", {
   downloadBtn: !!downloadBtn,
 });
 
-// Helper to get data from chrome.storage.sync
-async function getFromStorageSync(key: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if (
-      typeof chrome !== "undefined" &&
-      chrome.storage &&
-      chrome.storage.sync
-    ) {
-      chrome.storage.sync.get([key], (result) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          const value = result[key];
-          // Handle both stringified and direct JSON objects
-          if (typeof value === "string") {
-            try {
-              resolve(JSON.parse(value));
-            } catch (e) {
-              resolve(value);
-            }
-          } else {
-            resolve(value || null);
-          }
-        }
-      });
-    } else {
-      reject(new Error("chrome.storage.sync not available"));
-    }
-  });
-}
-
 // Helper to request resume from content script on localhost
 async function getResumeFromLocalhost(): Promise<any> {
   return new Promise((resolve) => {
