@@ -156,7 +156,6 @@ function injectButton() {
     // Capture the page with enriched content
     const pageURL = window.location.href;
     const enrichedContent = getEnrichedPageContent();
-    const pageText = getPageText();
 
     // Also try to extract basic info from DOM as fallback
     const basicJobData = extractJobDescriptionFromDOM();
@@ -166,8 +165,10 @@ function injectButton() {
       // Use enriched content for better analysis, but respect storage limits
       // Chrome storage sync has ~100KB quota per extension, 8KB per item
       // We'll store the enriched content (shorter) instead of full HTML
-      const maxContentLength = 8000; // Stay well under the 8KB per-item limit
+      const maxContentLength = 10000; // Stay well under the 8KB per-item limit
       const contentToStore = enrichedContent.substring(0, maxContentLength);
+
+      console.log("[Content Script] Enriched content length:", contentToStore.length);
 
       // Store limited data to avoid exceeding chrome.storage.sync quota
       const dataToStore: Record<string, any> = {
@@ -179,6 +180,10 @@ function injectButton() {
       // Only include basicJobData if we have it (it's already small)
       if (basicJobData) {
         dataToStore["currentJobData"] = basicJobData;
+        console.log("[Content Script] DOM extraction found:", {
+          title: basicJobData.title,
+          company: basicJobData.company,
+        });
       }
 
       // Store in chrome.storage.sync for extension context
@@ -197,9 +202,8 @@ function injectButton() {
       });
 
       console.log("[Content Script] Page data saved to chrome.storage.sync");
-      console.log("[Content Script] Content length:", contentToStore.length);
+      console.log("[Content Script] Content will be sent to Gemini for analysis");
       console.log("[Content Script] URL:", pageURL);
-      console.log("[Content Script] Basic job data extracted:", basicJobData);
 
       // Show success feedback
       button.textContent = "✓ Analyzed! Opening...";
