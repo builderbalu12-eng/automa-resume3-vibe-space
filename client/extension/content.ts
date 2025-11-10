@@ -173,10 +173,7 @@ function injectButton() {
       });
 
       console.log("[Content Script] Page data saved to chrome.storage.sync");
-      console.log(
-        "[Content Script] Content length:",
-        contentToStore.length,
-      );
+      console.log("[Content Script] Content length:", contentToStore.length);
       console.log("[Content Script] URL:", pageURL);
       console.log("[Content Script] Basic job data extracted:", basicJobData);
 

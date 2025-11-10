@@ -202,7 +202,10 @@ async function init() {
       try {
         console.log("[Popup] Checking if page is a job posting...");
         console.log("[Popup] Page content length:", pageText.length);
-        console.log("[Popup] Page content preview:", pageText.substring(0, 200));
+        console.log(
+          "[Popup] Page content preview:",
+          pageText.substring(0, 200),
+        );
 
         // Pass content directly to Gemini
         // The Gemini functions will handle both HTML and plain text analysis

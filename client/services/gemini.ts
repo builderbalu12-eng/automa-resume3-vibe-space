@@ -102,11 +102,17 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
           parsed = JSON.parse(jsonMatch[0]);
         } catch (innerError) {
           console.error("[isJobPostingPage] Failed to parse JSON:", innerError);
-          console.error("[isJobPostingPage] Response was:", text.substring(0, 500));
+          console.error(
+            "[isJobPostingPage] Response was:",
+            text.substring(0, 500),
+          );
           return false;
         }
       } else {
-        console.error("[isJobPostingPage] No JSON found in response:", text.substring(0, 500));
+        console.error(
+          "[isJobPostingPage] No JSON found in response:",
+          text.substring(0, 500),
+        );
         return false;
       }
     }
@@ -212,11 +218,17 @@ export async function parseJobFromHTML(
             "[parseJobFromHTML] Failed to parse extracted JSON:",
             innerE,
           );
-          console.error("[parseJobFromHTML] Response was:", text.substring(0, 500));
+          console.error(
+            "[parseJobFromHTML] Response was:",
+            text.substring(0, 500),
+          );
           return null;
         }
       } else {
-        console.error("[parseJobFromHTML] No JSON found in response:", text.substring(0, 500));
+        console.error(
+          "[parseJobFromHTML] No JSON found in response:",
+          text.substring(0, 500),
+        );
         return null;
       }
     }
@@ -226,7 +238,10 @@ export async function parseJobFromHTML(
     const description = (parsed.description || "").trim();
 
     console.log("[parseJobFromHTML] Extracted title:", title);
-    console.log("[parseJobFromHTML] Extracted description length:", description.length);
+    console.log(
+      "[parseJobFromHTML] Extracted description length:",
+      description.length,
+    );
 
     // If no title or description, it's likely not a valid job posting
     if (
