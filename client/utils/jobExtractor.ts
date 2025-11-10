@@ -44,6 +44,10 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     { title: "h1", desc: ".jobsectionwrap" },
     { title: "[data-cy='job-title']", desc: "[data-cy='job-description']" },
     { title: ".jdMainSection h1", desc: ".jdMainSection" },
+    // Additional Naukri selectors for different page versions
+    { title: "[data-cy='job-card-title']", desc: "[data-cy='job-card-description']" },
+    { title: ".jobTitle", desc: ".jobDescription" },
+    { title: ".job-title", desc: ".job-description-text" },
   ];
 
   for (const selector of naukriSelectors) {
@@ -65,17 +69,51 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     }
   }
 
-  // Fallback: Try to extract from any visible text if basic selectors fail
-  const h1 = document.querySelector("h1");
+  // Naukri-specific fallback: Look for job title in headers and description in main sections
+  const allHeadings = document.querySelectorAll("h1, h2");
+  let naukriTitle = "";
+
+  for (const heading of allHeadings) {
+    const text = heading.textContent?.trim() || "";
+    // Skip navigation/generic headings
+    if (text.length > 5 && text.length < 200 && !text.includes("Job") && !text.includes("Naukri")) {
+      naukriTitle = text;
+      break;
+    }
+  }
+
+  // Try to find main job content area for description
   const mainContent = document.querySelector(
-    "main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection",
+    "main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection, .jobContainer, [class*='description']",
   );
 
-  if (h1?.textContent?.trim() && mainContent?.textContent) {
+  if (naukriTitle && mainContent?.textContent) {
     const contentText = mainContent.textContent.trim();
     if (contentText.length > 200) {
       return {
-        title: h1.textContent.trim() || "Unknown",
+        title: naukriTitle || "Unknown",
+        company: "Unknown",
+        description: contentText,
+        requirements: extractRequirements(contentText),
+        skills: extractSkills(contentText),
+        extractedAt: new Date(),
+      };
+    }
+  }
+
+  // Additional fallback: Try to extract from any visible text if basic selectors fail
+  const h1 = document.querySelector("h1");
+  const h2 = document.querySelector("h2");
+  const fallbackMainContent = document.querySelector(
+    "main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection",
+  );
+
+  if ((h1?.textContent?.trim() || h2?.textContent?.trim()) && fallbackMainContent?.textContent) {
+    const title = h1?.textContent?.trim() || h2?.textContent?.trim() || "Unknown";
+    const contentText = fallbackMainContent.textContent.trim();
+    if (contentText.length > 200) {
+      return {
+        title: title,
         company: "Unknown",
         description: contentText,
         requirements: extractRequirements(contentText),
