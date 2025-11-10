@@ -104,8 +104,14 @@ function getEnrichedPageContent(): string {
   // Get all visible text from page (this is what Gemini will analyze)
   const pageText = document.body.innerText || "";
 
-  // Get specific job-related sections
+  // Get specific job-related sections with Naukri-specific support
   const jobSectionSelectors = [
+    // Naukri specific
+    ".job-desc",
+    ".jdMainSection",
+    ".jobsectionwrap",
+    "[data-cy='job-description']",
+    // Generic selectors
     ".job-description",
     "[class*='description']",
     "[class*='job']",
@@ -118,25 +124,35 @@ function getEnrichedPageContent(): string {
   ];
 
   let jobContent = "";
+  // Try each selector and get the first one with substantial content
   for (const selector of jobSectionSelectors) {
-    const el = document.querySelector(selector);
-    if (el?.textContent && el.textContent.length > 100) {
-      jobContent = el.textContent;
-      break;
+    try {
+      const el = document.querySelector(selector);
+      const text = el?.textContent?.trim();
+      if (text && text.length > 100) {
+        jobContent = text;
+        break;
+      }
+    } catch (e) {
+      // Skip invalid selectors
+      continue;
     }
   }
 
-  // Combine content
+  // Combine content - prefer job content, fall back to full page text
   if (jobContent && jobContent.length > 100) {
+    parts.push("=== JOB POSTING CONTENT ===");
     parts.push(jobContent);
   } else if (pageText && pageText.length > 100) {
-    parts.push(pageText);
+    parts.push("=== PAGE CONTENT ===");
+    // For Naukri and similar sites, include more of the page if we can't find specific job section
+    parts.push(pageText.substring(0, 15000)); // Increased limit for better content
   }
 
   // Add meta information
   const url = window.location.href;
   const hostname = window.location.hostname;
-  if (url) parts.push(`URL: ${url}`);
+  if (url) parts.push(`\nURL: ${url}`);
   if (hostname) parts.push(`Site: ${hostname}`);
 
   return parts.join("\n\n");
