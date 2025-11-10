@@ -142,6 +142,27 @@ async function loadMasterResume() {
   }
 }
 
+// Request page data from background service worker
+async function getPageDataFromBackground(): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { action: "getPageData" },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn(
+            "[Popup] Could not get page data from background:",
+            chrome.runtime.lastError.message,
+          );
+        } else if (response?.pageData) {
+          console.log("[Popup] Received page data from background");
+          state.pageHTML = response.pageData.pageHTML;
+        }
+        resolve();
+      },
+    );
+  });
+}
+
 // Initialize on popup open
 async function init() {
   try {
@@ -150,6 +171,9 @@ async function init() {
     // Load master resume on open
     const resume = await loadMasterResume();
 
+    // Get page data from background service worker if available
+    await getPageDataFromBackground();
+
     // Show initial UI
     updateUI();
   } catch (error) {
@@ -157,16 +181,6 @@ async function init() {
     updateUI();
   }
 }
-
-// Listen for analyzeJob message from content script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "analyzeJob") {
-    console.log("[Popup] Received analyzeJob message with HTML");
-    state.pageHTML = request.pageHTML;
-    sendResponse({ success: true });
-    updateUI();
-  }
-});
 
 function updateUI() {
   // Hide everything first
