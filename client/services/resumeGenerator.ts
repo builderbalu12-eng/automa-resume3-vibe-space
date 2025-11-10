@@ -13,6 +13,79 @@ import {
 } from "docx";
 import { ResumeData } from "@/types";
 
+// Simple PDF generation by creating styled HTML and using browser's print-to-PDF
+async function generatePDFFromHTML(htmlContent: string): Promise<Blob> {
+  // Create a styled wrapper with print-friendly CSS
+  const styledHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Resume</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          background: white;
+        }
+        .resume {
+          max-width: 8.5in;
+          height: 11in;
+          margin: auto;
+          padding: 0.5in;
+          background: white;
+          box-shadow: 0 0 0 1px #ddd;
+        }
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+        .contact { font-size: 12px; margin-bottom: 16px; color: #666; }
+        h2 {
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          margin-top: 14px;
+          margin-bottom: 8px;
+          border-bottom: 2px solid #333;
+          padding-bottom: 4px;
+        }
+        .section { margin-bottom: 12px; }
+        .job { margin-bottom: 10px; }
+        .job-title { font-weight: 600; font-size: 12px; }
+        .company { font-size: 11px; color: #666; }
+        .duration { font-size: 11px; color: #999; }
+        .job-bullets { margin: 4px 0 0 20px; font-size: 11px; line-height: 1.4; }
+        .job-bullets li { margin-bottom: 2px; }
+        .skills { font-size: 11px; }
+        .skills span {
+          display: inline-block;
+          background: #f0f0f0;
+          padding: 2px 6px;
+          margin: 2px;
+          border-radius: 3px;
+        }
+        .education { font-size: 11px; margin-bottom: 8px; }
+        .degree { font-weight: 600; }
+        .institution { color: #666; }
+        @media print {
+          body { margin: 0; padding: 0; }
+          .resume { max-width: 100%; height: auto; box-shadow: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="resume">
+        ${htmlContent}
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Convert HTML string to Blob
+  const blob = new Blob([styledHTML], { type: "text/html" });
+  return blob;
+}
+
 export async function generateResumeDocx(
   resume: ResumeData,
   company: string,
