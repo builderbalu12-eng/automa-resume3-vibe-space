@@ -103,7 +103,7 @@ function injectButton() {
     button.textContent = "⏳ Analyzing...";
     button.disabled = true;
 
-    // Capture the full HTML page
+    // Capture the page
     const pageHTML = getPageHTML();
     const pageText = getPageText();
     const pageURL = window.location.href;
@@ -113,14 +113,17 @@ function injectButton() {
 
     // Save page content to storage for the popup to access
     try {
-      // Use chrome.storage.sync directly to ensure data persists across extension contexts
-      const dataToStore = {
-        currentPageHTML: pageHTML,
-        currentPageText: pageText,
+      // Limit page text to 50KB to avoid quota exceeded errors (Chrome limit is 8KB per item)
+      const truncatedPageText = pageText.substring(0, 50000);
+
+      // Store limited data to avoid exceeding chrome.storage.sync quota (8KB per item)
+      const dataToStore: Record<string, any> = {
+        currentPageText: truncatedPageText,
         currentPageURL: pageURL,
         currentPageAnalyzedAt: new Date().toISOString(),
       };
 
+      // Only include basicJobData if we have it (it's already small)
       if (basicJobData) {
         dataToStore["currentJobData"] = basicJobData;
       }
@@ -140,10 +143,9 @@ function injectButton() {
         }
       });
 
-      console.log("Page data saved to chrome.storage.sync");
-      console.log("Page HTML length:", pageHTML.length);
-      console.log("Page text length:", pageText.length);
-      console.log("Basic job data extracted:", basicJobData);
+      console.log("[Content Script] Page data saved to chrome.storage.sync");
+      console.log("[Content Script] Page text length:", truncatedPageText.length);
+      console.log("[Content Script] Basic job data extracted:", basicJobData);
 
       // Show success feedback
       button.textContent = "✓ Analyzed! Opening...";
@@ -163,7 +165,7 @@ function injectButton() {
           "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
       }, 2000);
     } catch (error) {
-      console.error("Error saving page data:", error);
+      console.error("[Content Script] Error saving page data:", error);
       alert(
         `Failed to analyze page: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
