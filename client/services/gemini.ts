@@ -118,9 +118,15 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
     let isPosting = false;
 
     // Check if response contains "true"
-    if (text.toLowerCase().includes('"true"') || text.toLowerCase().includes(": true")) {
+    if (
+      text.toLowerCase().includes('"true"') ||
+      text.toLowerCase().includes(": true")
+    ) {
       isPosting = true;
-    } else if (text.toLowerCase().includes("yes") && !text.toLowerCase().includes("no")) {
+    } else if (
+      text.toLowerCase().includes("yes") &&
+      !text.toLowerCase().includes("no")
+    ) {
       isPosting = true;
     }
 
@@ -137,7 +143,9 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
             const parsed = JSON.parse(jsonMatch[0]);
             isPosting = Boolean(parsed.isJobPosting || parsed.is_job_posting);
           } catch (innerError) {
-            console.warn("[isJobPostingPage] Could not parse JSON, checking text content");
+            console.warn(
+              "[isJobPostingPage] Could not parse JSON, checking text content",
+            );
           }
         }
       }
@@ -151,7 +159,10 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
       console.error("[isJobPostingPage] Error message:", error.message);
     }
     // Fallback: use keyword-based detection
-    console.log("[isJobPostingPage] Using keyword fallback, matches:", keywordMatches);
+    console.log(
+      "[isJobPostingPage] Using keyword fallback, matches:",
+      keywordMatches,
+    );
     return keywordMatches >= 3;
   }
 }

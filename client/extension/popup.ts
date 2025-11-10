@@ -256,7 +256,10 @@ async function init() {
             }
           }
         } catch (geminError) {
-          console.warn("[Popup] Gemini error, trying basic extraction...", geminError);
+          console.warn(
+            "[Popup] Gemini error, trying basic extraction...",
+            geminError,
+          );
           // Gemini API error - fallback to basic job data
           if (basicJobData) {
             state.jobData = basicJobData;

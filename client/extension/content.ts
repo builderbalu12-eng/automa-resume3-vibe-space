@@ -168,7 +168,10 @@ function injectButton() {
       const maxContentLength = 10000; // Stay well under the 8KB per-item limit
       const contentToStore = enrichedContent.substring(0, maxContentLength);
 
-      console.log("[Content Script] Enriched content length:", contentToStore.length);
+      console.log(
+        "[Content Script] Enriched content length:",
+        contentToStore.length,
+      );
 
       // Store limited data to avoid exceeding chrome.storage.sync quota
       const dataToStore: Record<string, any> = {
@@ -202,7 +205,9 @@ function injectButton() {
       });
 
       console.log("[Content Script] Page data saved to chrome.storage.sync");
-      console.log("[Content Script] Content will be sent to Gemini for analysis");
+      console.log(
+        "[Content Script] Content will be sent to Gemini for analysis",
+      );
       console.log("[Content Script] URL:", pageURL);
 
       // Show success feedback
