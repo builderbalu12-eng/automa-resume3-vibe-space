@@ -37,19 +37,47 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     };
   }
 
-  // Naukri job description
-  const naukriTitle = document.querySelector(".jd-header .naukri-text");
-  const naukriDescription = document.querySelector(".job-desc");
+  // Naukri job description - try multiple selector patterns as they update their structure
+  const naukriSelectors = [
+    { title: ".jd-header h1", desc: ".job-desc" },
+    { title: "h1.jd-title", desc: "[data-cy='jd-desc']" },
+    { title: "h1", desc: ".jobsectionwrap" },
+    { title: "[data-cy='job-title']", desc: "[data-cy='job-description']" },
+    { title: ".jdMainSection h1", desc: ".jdMainSection" },
+  ];
 
-  if (naukriTitle && naukriDescription) {
-    return {
-      title: naukriTitle.textContent || "Unknown",
-      company: "Unknown",
-      description: naukriDescription.textContent || "",
-      requirements: extractRequirements(naukriDescription.textContent || ""),
-      skills: extractSkills(naukriDescription.textContent || ""),
-      extractedAt: new Date(),
-    };
+  for (const selector of naukriSelectors) {
+    const naukriTitle = document.querySelector(selector.title);
+    const naukriDescription = document.querySelector(selector.desc);
+
+    if (naukriTitle?.textContent?.trim() && naukriDescription?.textContent?.trim()) {
+      return {
+        title: naukriTitle.textContent.trim() || "Unknown",
+        company: "Unknown",
+        description: naukriDescription.textContent.trim() || "",
+        requirements: extractRequirements(naukriDescription.textContent || ""),
+        skills: extractSkills(naukriDescription.textContent || ""),
+        extractedAt: new Date(),
+      };
+    }
+  }
+
+  // Fallback: Try to extract from any visible text if basic selectors fail
+  const h1 = document.querySelector("h1");
+  const mainContent = document.querySelector("main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection");
+
+  if (h1?.textContent?.trim() && mainContent?.textContent) {
+    const contentText = mainContent.textContent.trim();
+    if (contentText.length > 200) {
+      return {
+        title: h1.textContent.trim() || "Unknown",
+        company: "Unknown",
+        description: contentText,
+        requirements: extractRequirements(contentText),
+        skills: extractSkills(contentText),
+        extractedAt: new Date(),
+      };
+    }
   }
 
   // Glassdoor job description
