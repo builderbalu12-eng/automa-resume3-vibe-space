@@ -23,9 +23,7 @@ function initGemini(): GoogleGenerativeAI {
   return client;
 }
 
-export async function isJobPostingPage(
-  htmlContent: string,
-): Promise<boolean> {
+export async function isJobPostingPage(htmlContent: string): Promise<boolean> {
   const genAI = initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -149,10 +147,7 @@ export async function parseJobFromHTML(
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    console.log(
-      "[parseJobFromHTML] Gemini response:",
-      text.substring(0, 300),
-    );
+    console.log("[parseJobFromHTML] Gemini response:", text.substring(0, 300));
 
     // Try to extract JSON from response
     let parsed;
@@ -167,7 +162,10 @@ export async function parseJobFromHTML(
         try {
           parsed = JSON.parse(jsonMatch[0]);
         } catch (innerE) {
-          console.error("[parseJobFromHTML] Failed to parse extracted JSON:", innerE);
+          console.error(
+            "[parseJobFromHTML] Failed to parse extracted JSON:",
+            innerE,
+          );
           return null;
         }
       } else {
@@ -181,7 +179,12 @@ export async function parseJobFromHTML(
     const description = (parsed.description || "").trim();
 
     // If no title or description, it's likely not a valid job posting
-    if (!title || !description || title === "Unknown Position" || description.length < 50) {
+    if (
+      !title ||
+      !description ||
+      title === "Unknown Position" ||
+      description.length < 50
+    ) {
       console.log(
         "[parseJobFromHTML] Parsed data looks incomplete - likely not a job posting",
       );

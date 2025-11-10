@@ -202,29 +202,42 @@ async function init() {
         const isJobPosting = await isJobPostingPage(pageHTML);
 
         if (isJobPosting) {
-          console.log("[Popup] Page detected as job posting. Parsing details...");
+          console.log(
+            "[Popup] Page detected as job posting. Parsing details...",
+          );
           // Parse HTML using Gemini to extract job details
           const parsedJobData = await parseJobFromHTML(pageHTML);
 
           if (parsedJobData) {
             state.jobData = parsedJobData;
-            console.log("[Popup] Successfully parsed job data from HTML:", state.jobData.title);
+            console.log(
+              "[Popup] Successfully parsed job data from HTML:",
+              state.jobData.title,
+            );
           } else {
-            console.log("[Popup] Job parsing returned null - likely not a valid job posting");
+            console.log(
+              "[Popup] Job parsing returned null - likely not a valid job posting",
+            );
             // Fallback to basic job data if Gemini parsing fails
             if (basicJobData) {
               state.jobData = basicJobData;
-              console.log("[Popup] Using fallback job data from DOM extraction");
+              console.log(
+                "[Popup] Using fallback job data from DOM extraction",
+              );
             }
           }
         } else {
-          console.log("[Popup] Page is not a job posting. Checking basic DOM extraction...");
+          console.log(
+            "[Popup] Page is not a job posting. Checking basic DOM extraction...",
+          );
           // Page is not recognized as a job posting, try basic extraction as fallback
           if (basicJobData) {
             state.jobData = basicJobData;
             console.log("[Popup] Using basic job data from DOM extraction");
           } else {
-            console.log("[Popup] No job posting detected and no DOM data found");
+            console.log(
+              "[Popup] No job posting detected and no DOM data found",
+            );
           }
         }
       } catch (error) {
@@ -232,7 +245,9 @@ async function init() {
         // Fallback to basic job data if error occurs
         if (basicJobData) {
           state.jobData = basicJobData;
-          console.log("[Popup] Error occurred, using fallback job data from DOM extraction");
+          console.log(
+            "[Popup] Error occurred, using fallback job data from DOM extraction",
+          );
         }
       }
     } else if (basicJobData) {
