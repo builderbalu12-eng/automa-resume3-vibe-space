@@ -89,7 +89,33 @@ function getPageHTML(): string {
 }
 
 function getPageText(): string {
+  // Get all visible text from the page
   return document.body.innerText;
+}
+
+function getEnrichedPageContent(): string {
+  // Combine various content sources to create a richer analysis document
+  const parts: string[] = [];
+
+  // Get page title
+  const title = document.title;
+  if (title) parts.push(`Page Title: ${title}`);
+
+  // Get main headings
+  document.querySelectorAll("h1, h2, h3").forEach((el) => {
+    if (el.textContent) parts.push(el.textContent.trim());
+  });
+
+  // Get main content areas
+  const mainContent = document.querySelector("main, article, [role='main']");
+  if (mainContent?.textContent) {
+    parts.push(mainContent.textContent);
+  } else {
+    // Fallback to body text
+    parts.push(document.body.innerText);
+  }
+
+  return parts.join("\n\n");
 }
 
 function injectButton() {
