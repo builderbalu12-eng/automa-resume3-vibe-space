@@ -619,3 +619,200 @@ export async function calculateATSScore(
     };
   }
 }
+
+export async function analyzeJobAndTailorResume(
+  pageHTML: string,
+  masterResume: ResumeData,
+): Promise<TailoredResumeResult> {
+  const genAI = initGemini();
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  // Clean HTML
+  let cleanHTML = pageHTML
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .substring(0, 24000); // Use more content for better parsing
+
+  const resumeText = JSON.stringify(
+    {
+      name: masterResume.contact.name,
+      email: masterResume.contact.email,
+      summary: masterResume.summary,
+      skills: masterResume.skills,
+      experience: masterResume.experience.map((e) => ({
+        title: e.title,
+        company: e.company,
+        duration: `${e.startDate} - ${e.endDate || "Present"}`,
+        description: e.description,
+      })),
+      education: masterResume.education.map((e) => ({
+        degree: e.degree,
+        field: e.field,
+        institution: e.institution,
+        graduation: e.graduationDate,
+      })),
+    },
+    null,
+    2,
+  );
+
+  const prompt = `You are an expert resume optimizer and job analyst.
+
+TASK:
+1. Extract job posting details from the page content
+2. Tailor the provided resume for this specific job
+3. Calculate ATS match score
+
+PAGE CONTENT (job posting):
+${cleanHTML}
+
+MASTER RESUME:
+${resumeText}
+
+INSTRUCTIONS:
+1. EXTRACT JOB DETAILS from the page content:
+   - Find job title (exact position name)
+   - Find company name
+   - Find location if available
+   - Extract key responsibilities and requirements
+   - Extract required technical skills
+   - Extract years of experience required if mentioned
+
+2. TAILOR THE RESUME:
+   - Rewrite professional summary to highlight most relevant experience for THIS job
+   - Reorder experience entries by relevance to job requirements
+   - Rewrite 3-4 bullet points for each relevant job position to match job keywords
+   - Reorder skills list to prioritize job-required skills first
+   - Maintain ATS-friendly formatting (no special characters, standard text)
+   - Keep quantifiable achievements that are relevant to this job
+
+3. CALCULATE ATS SCORE:
+   - Rate how well the tailored resume matches the job (0-100)
+   - Identify which keywords/skills matched
+   - List missing important keywords
+   - Suggest improvements
+
+4. CREATE SUMMARY:
+   - Write a short 2-3 sentence summary of the job and match
+
+Return ONLY valid JSON (no markdown, no explanations):
+{
+  "jobTitle": "extracted job title",
+  "company": "extracted company name",
+  "location": "location or 'Not specified'",
+  "jobDescription": "comprehensive job description combining responsibilities and requirements",
+  "requirements": ["requirement 1", "requirement 2", ...],
+  "skills": ["skill 1", "skill 2", ...],
+  "tailoredSummary": "2-3 sentence professional summary tailored for this job",
+  "tailoredExperience": [
+    {"position": "exact job title from resume", "newBullets": ["bullet 1", "bullet 2", "bullet 3"]},
+    ...
+  ],
+  "tailoredSkillsOrder": ["most relevant skill", "skill 2", ...],
+  "atsScore": number between 0-100,
+  "atsMatchPercentage": number between 0-100,
+  "matchedKeywords": ["keyword 1", "keyword 2", ...],
+  "missingKeywords": ["missing keyword 1", ...],
+  "improvements": ["improvement 1", "improvement 2", ...],
+  "jobSummary": "2-3 sentence summary of the job and how well the resume matches"
+}`;
+
+  try {
+    console.log("[Gemini] Analyzing job and tailoring resume...");
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+
+    console.log("[Gemini] Response received, parsing...");
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No valid JSON in response");
+      }
+    }
+
+    // Build job description object
+    const jobData: JobDescription = {
+      title: parsed.jobTitle || "Unknown Position",
+      company: parsed.company || "Unknown Company",
+      location: parsed.location || "",
+      description: parsed.jobDescription || "",
+      requirements: Array.isArray(parsed.requirements)
+        ? parsed.requirements.filter((r: string) => r && r.trim())
+        : [],
+      skills: Array.isArray(parsed.skills)
+        ? parsed.skills.filter((s: string) => s && s.trim())
+        : [],
+      extractedAt: new Date(),
+    };
+
+    // Build tailored resume
+    const tailoredResume: ResumeData = {
+      ...masterResume,
+      summary: parsed.tailoredSummary || masterResume.summary,
+      experience: masterResume.experience.map((exp) => {
+        const tailored = Array.isArray(parsed.tailoredExperience)
+          ? parsed.tailoredExperience.find(
+              (t: any) =>
+                t.position?.toLowerCase() === exp.title.toLowerCase() ||
+                t.position?.toLowerCase().includes(exp.title.toLowerCase()),
+            )
+          : null;
+
+        return {
+          ...exp,
+          description:
+            tailored?.newBullets && Array.isArray(tailored.newBullets)
+              ? tailored.newBullets.filter((b: string) => b && b.trim())
+              : exp.description,
+        };
+      }),
+      skills: Array.isArray(parsed.tailoredSkillsOrder)
+        ? parsed.tailoredSkillsOrder.filter((s: string) =>
+            masterResume.skills.some(
+              (ms) => ms.toLowerCase() === s.toLowerCase(),
+            ),
+          )
+        : masterResume.skills,
+    };
+
+    // Build ATS score
+    const atsScore: ATSScore = {
+      score: Math.min(100, Math.max(0, parsed.atsScore || 0)),
+      matchPercentage: Math.min(100, Math.max(0, parsed.atsMatchPercentage || 0)),
+      keywordMatches: (Array.isArray(parsed.matchedKeywords)
+        ? parsed.matchedKeywords
+        : []
+      ).filter((k: string) => k && k.trim()),
+      missingKeywords: (Array.isArray(parsed.missingKeywords)
+        ? parsed.missingKeywords
+        : []
+      ).filter((k: string) => k && k.trim()),
+      improvements: (Array.isArray(parsed.improvements)
+        ? parsed.improvements
+        : []
+      ).filter((i: string) => i && i.trim()),
+    };
+
+    const summary = parsed.jobSummary || `Match: ${atsScore.score}% for ${jobData.title} at ${jobData.company}`;
+
+    return {
+      jobData,
+      tailoredResume,
+      atsScore,
+      summary,
+    };
+  } catch (error) {
+    console.error("[Gemini] Error analyzing job and tailoring resume:", error);
+    throw error;
+  }
+}
