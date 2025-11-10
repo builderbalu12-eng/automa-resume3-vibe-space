@@ -10,6 +10,15 @@ try {
   GEMINI_API_KEY = "";
 }
 
+// Also try to get from window object if extension context
+if (
+  !GEMINI_API_KEY &&
+  typeof window !== "undefined" &&
+  (window as any).GEMINI_API_KEY
+) {
+  GEMINI_API_KEY = (window as any).GEMINI_API_KEY;
+}
+
 let client: GoogleGenerativeAI | null = null;
 
 function initGemini(): GoogleGenerativeAI {
@@ -21,6 +30,13 @@ function initGemini(): GoogleGenerativeAI {
   }
   client = new GoogleGenerativeAI(GEMINI_API_KEY);
   return client;
+}
+
+export interface TailoredResumeResult {
+  jobData: JobDescription;
+  tailoredResume: ResumeData;
+  atsScore: ATSScore;
+  summary: string;
 }
 
 export async function isJobPostingPage(pageContent: string): Promise<boolean> {
