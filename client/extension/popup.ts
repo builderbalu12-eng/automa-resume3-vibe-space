@@ -1,21 +1,14 @@
-import { getMasterResume, getFromStorage } from "@/utils/storage";
-import {
-  tailorResumeForJob,
-  calculateATSScore,
-  extractJobRequirements,
-  parseJobFromHTML,
-  isJobPostingPage,
-} from "@/services/gemini";
-import { saveApplication } from "@/services/mongodb";
-import { downloadResume, generateResumeDocx } from "@/services/resumeGenerator";
-import { ResumeData, JobDescription, ApplicationRecord } from "@/types";
+import { getMasterResume } from "@/utils/storage";
+import { analyzeJobAndTailorResume } from "@/services/gemini";
+import { downloadResumePDF } from "@/services/resumeGenerator";
+import { ResumeData, JobDescription, ATSScore } from "@/types";
 
 interface PopupState {
   masterResume: ResumeData | null;
+  pageHTML: string | null;
   jobData: JobDescription | null;
   tailoredResume: ResumeData | null;
-  atsScore: number;
-  jobDescription: JobDescription | null;
+  atsScore: ATSScore | null;
 }
 
 let state: PopupState = {
