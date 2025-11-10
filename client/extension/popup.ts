@@ -211,46 +211,57 @@ async function init() {
         // The Gemini functions will handle both HTML and plain text analysis
         const pageContent = pageText.substring(0, 16000);
 
-        // First, check if this page actually contains a job posting
-        const isJobPosting = await isJobPostingPage(pageContent);
-        console.log("[Popup] isJobPosting result:", isJobPosting);
+        try {
+          // First, check if this page actually contains a job posting
+          const isJobPosting = await isJobPostingPage(pageContent);
+          console.log("[Popup] isJobPosting result:", isJobPosting);
 
-        if (isJobPosting) {
-          console.log(
-            "[Popup] Page detected as job posting. Parsing details...",
-          );
-          // Parse using Gemini to extract job details
-          const parsedJobData = await parseJobFromHTML(pageContent);
-
-          if (parsedJobData) {
-            state.jobData = parsedJobData;
+          if (isJobPosting) {
             console.log(
-              "[Popup] Successfully parsed job data from page:",
-              state.jobData.title,
+              "[Popup] Page detected as job posting. Parsing details...",
             );
+            // Parse using Gemini to extract job details
+            const parsedJobData = await parseJobFromHTML(pageContent);
+
+            if (parsedJobData) {
+              state.jobData = parsedJobData;
+              console.log(
+                "[Popup] Successfully parsed job data from page:",
+                state.jobData.title,
+              );
+            } else {
+              console.log(
+                "[Popup] Job parsing returned null - trying basic DOM extraction...",
+              );
+              // Fallback to basic job data if Gemini parsing fails
+              if (basicJobData) {
+                state.jobData = basicJobData;
+                console.log(
+                  "[Popup] Using fallback job data from DOM extraction",
+                );
+              }
+            }
           } else {
             console.log(
-              "[Popup] Job parsing returned null - likely not a valid job posting",
+              "[Popup] Gemini detected not a job posting. Checking basic DOM extraction...",
             );
-            // Fallback to basic job data if Gemini parsing fails
+            // Page is not recognized as a job posting, try basic extraction as fallback
             if (basicJobData) {
               state.jobData = basicJobData;
+              console.log("[Popup] Using basic job data from DOM extraction");
+            } else {
               console.log(
-                "[Popup] Using fallback job data from DOM extraction",
+                "[Popup] No job posting detected and no DOM data found",
               );
             }
           }
-        } else {
-          console.log(
-            "[Popup] Page is not a job posting. Checking basic DOM extraction...",
-          );
-          // Page is not recognized as a job posting, try basic extraction as fallback
+        } catch (geminError) {
+          console.warn("[Popup] Gemini error, trying basic extraction...", geminError);
+          // Gemini API error - fallback to basic job data
           if (basicJobData) {
             state.jobData = basicJobData;
-            console.log("[Popup] Using basic job data from DOM extraction");
-          } else {
             console.log(
-              "[Popup] No job posting detected and no DOM data found",
+              "[Popup] Gemini error occurred, using basic job data from DOM extraction",
             );
           }
         }
