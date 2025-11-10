@@ -50,7 +50,10 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     const naukriTitle = document.querySelector(selector.title);
     const naukriDescription = document.querySelector(selector.desc);
 
-    if (naukriTitle?.textContent?.trim() && naukriDescription?.textContent?.trim()) {
+    if (
+      naukriTitle?.textContent?.trim() &&
+      naukriDescription?.textContent?.trim()
+    ) {
       return {
         title: naukriTitle.textContent.trim() || "Unknown",
         company: "Unknown",
@@ -64,7 +67,9 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
 
   // Fallback: Try to extract from any visible text if basic selectors fail
   const h1 = document.querySelector("h1");
-  const mainContent = document.querySelector("main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection");
+  const mainContent = document.querySelector(
+    "main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection",
+  );
 
   if (h1?.textContent?.trim() && mainContent?.textContent) {
     const contentText = mainContent.textContent.trim();

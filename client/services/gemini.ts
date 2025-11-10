@@ -158,7 +158,13 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
       }
     }
 
-    console.log("[isJobPostingPage] Result:", isPosting, "(keywords:", keywordMatches, ")");
+    console.log(
+      "[isJobPostingPage] Result:",
+      isPosting,
+      "(keywords:",
+      keywordMatches,
+      ")",
+    );
     return isPosting;
   } catch (error) {
     console.error("[isJobPostingPage] Error detecting job posting:", error);
