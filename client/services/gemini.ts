@@ -40,35 +40,57 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
 
   cleanContent = cleanContent.substring(0, 12000); // Limit to first 12k chars for API limits
 
-  const prompt = `Analyze this page content and determine if it contains a job posting.
+  // First, do simple keyword-based detection for fast filtering
+  const lowerContent = cleanContent.toLowerCase();
+  const jobKeywords = [
+    "job posting",
+    "job description",
+    "job title",
+    "responsibilities",
+    "requirements",
+    "qualifications",
+    "apply now",
+    "position",
+    "role",
+    "software engineer",
+    "data scientist",
+    "product manager",
+    "hiring",
+    "open position",
+    "experience required",
+    "skills needed",
+  ];
 
-  Look for indicators such as:
-  - Job title, position name, or role (like "Software Engineer", "Data Scientist", "Product Manager")
-  - Company name or organization
-  - Job description or detailed responsibilities section
-  - Requirements or qualifications section
-  - Salary, location, or employment type information
-  - Keywords like "apply", "apply now", "join us", "hiring", "open position", "we're hiring"
-  - Benefits or job details section
-  - Experience level required
+  const keywordMatches = jobKeywords.filter((kw) =>
+    lowerContent.includes(kw),
+  ).length;
 
-  Return ONLY a valid JSON object with:
-  {
-    "isJobPosting": true or false,
-    "confidence": number between 0-1 (how confident you are)
+  // If very few keyword matches, likely not a job posting
+  if (keywordMatches < 2 && !lowerContent.includes("job")) {
+    console.log(
+      "[isJobPostingPage] Fast filter detected non-job page (keyword matches:",
+      keywordMatches,
+      ")",
+    );
+    return false;
   }
 
-  Only return "true" if this is clearly a single job posting page with actual job details. Return "false" for:
-  - Job listing aggregator pages (showing multiple jobs)
-  - Company career pages listing many jobs
-  - Non-job pages that mention jobs
-  - Blog posts or articles about jobs
-  - Generic pages
+  const prompt = `Quickly determine: Is this a job posting page?
 
-  Return only the JSON object, nothing else.
+  Look for ANY of these:
+  - Job title (role, position name)
+  - Company hiring info
+  - Job description/responsibilities
+  - "Requirements" or "Qualifications" section
+  - "Apply" button or application info
+  - Salary, location, or job type info
+
+  Answer "yes" only if there's clear job posting content. Answer "no" for job listing sites, career pages listing many jobs, or non-job pages.
 
   Page Content:
-  ${cleanContent}`;
+  ${cleanContent}
+
+  Answer with: {"isJobPosting": true} or {"isJobPosting": false}`;
 
   try {
     console.log(
@@ -92,43 +114,45 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
       return false;
     }
 
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (e) {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          parsed = JSON.parse(jsonMatch[0]);
-        } catch (innerError) {
-          console.error("[isJobPostingPage] Failed to parse JSON:", innerError);
-          console.error(
-            "[isJobPostingPage] Response was:",
-            text.substring(0, 500),
-          );
-          return false;
+    // More lenient JSON parsing
+    let isPosting = false;
+
+    // Check if response contains "true"
+    if (text.toLowerCase().includes('"true"') || text.toLowerCase().includes(": true")) {
+      isPosting = true;
+    } else if (text.toLowerCase().includes("yes") && !text.toLowerCase().includes("no")) {
+      isPosting = true;
+    }
+
+    // Try strict JSON parsing as fallback
+    if (!isPosting) {
+      try {
+        const parsed = JSON.parse(text);
+        isPosting = Boolean(parsed.isJobPosting || parsed.is_job_posting);
+      } catch (e) {
+        // Try to extract JSON from text
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            isPosting = Boolean(parsed.isJobPosting || parsed.is_job_posting);
+          } catch (innerError) {
+            console.warn("[isJobPostingPage] Could not parse JSON, checking text content");
+          }
         }
-      } else {
-        console.error(
-          "[isJobPostingPage] No JSON found in response:",
-          text.substring(0, 500),
-        );
-        return false;
       }
     }
 
-    const isPosting = Boolean(parsed.isJobPosting);
-    const confidence = parsed.confidence || 0;
-    console.log(
-      `[isJobPostingPage] Result: ${isPosting} (confidence: ${confidence})`,
-    );
+    console.log("[isJobPostingPage] Result:", isPosting);
     return isPosting;
   } catch (error) {
     console.error("[isJobPostingPage] Error detecting job posting:", error);
     if (error instanceof Error) {
       console.error("[isJobPostingPage] Error message:", error.message);
     }
-    return false;
+    // Fallback: use keyword-based detection
+    console.log("[isJobPostingPage] Using keyword fallback, matches:", keywordMatches);
+    return keywordMatches >= 3;
   }
 }
 
