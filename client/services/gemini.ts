@@ -175,14 +175,25 @@ export async function parseJobFromHTML(
 
   try {
     console.log(
-      "[parseJobFromHTML] Sending HTML to Gemini for parsing...",
-      cleanHTML.length,
+      "[parseJobFromHTML] Sending content to Gemini for parsing...",
+      cleanContent.length,
       "chars",
     );
+
+    if (!cleanContent || cleanContent.trim().length === 0) {
+      console.warn("[parseJobFromHTML] Empty content provided");
+      return null;
+    }
+
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
     console.log("[parseJobFromHTML] Gemini response:", text.substring(0, 300));
+
+    if (!text) {
+      console.error("[parseJobFromHTML] Empty response from Gemini");
+      return null;
+    }
 
     // Try to extract JSON from response
     let parsed;
@@ -201,10 +212,11 @@ export async function parseJobFromHTML(
             "[parseJobFromHTML] Failed to parse extracted JSON:",
             innerE,
           );
+          console.error("[parseJobFromHTML] Response was:", text.substring(0, 500));
           return null;
         }
       } else {
-        console.error("[parseJobFromHTML] No JSON found in response");
+        console.error("[parseJobFromHTML] No JSON found in response:", text.substring(0, 500));
         return null;
       }
     }
@@ -213,15 +225,19 @@ export async function parseJobFromHTML(
     const title = (parsed.title || "").trim();
     const description = (parsed.description || "").trim();
 
+    console.log("[parseJobFromHTML] Extracted title:", title);
+    console.log("[parseJobFromHTML] Extracted description length:", description.length);
+
     // If no title or description, it's likely not a valid job posting
     if (
       !title ||
       !description ||
       title === "Unknown Position" ||
-      description.length < 50
+      description.length < 20
     ) {
       console.log(
         "[parseJobFromHTML] Parsed data looks incomplete - likely not a job posting",
+        { title, descLength: description.length },
       );
       return null;
     }
