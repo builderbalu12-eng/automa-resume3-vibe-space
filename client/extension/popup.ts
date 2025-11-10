@@ -89,10 +89,10 @@ async function getResumeFromLocalhost(): Promise<any> {
   });
 }
 
-// Initialize
-async function init() {
+// Load master resume on popup open
+async function loadMasterResume() {
   try {
-    console.log("[Popup] Initializing extension popup...");
+    console.log("[Popup] Loading master resume...");
 
     // Get master resume from browser storage
     let resume = await getMasterResume();
@@ -132,133 +132,41 @@ async function init() {
 
     if (resume) {
       console.log("[Popup] Resume name:", resume.contact?.name);
+      state.masterResume = resume;
     }
 
-    state.masterResume = resume;
+    return resume;
+  } catch (error) {
+    console.error("[Popup] Error loading resume:", error);
+    return null;
+  }
+}
 
-    // Get job data from storage (captured by content script when Analyse button was clicked)
-    let pageText: string | null = null;
-    let basicJobData: JobDescription | null = null;
+// Initialize on popup open
+async function init() {
+  try {
+    console.log("[Popup] Initializing extension popup...");
 
-    try {
-      pageText = await getFromStorageSync("currentPageText");
-      console.log(
-        "[Popup] Page text retrieved:",
-        pageText ? `${pageText.length} chars` : "None",
-      );
-    } catch (e) {
-      console.warn("[Popup] Could not get page text:", e);
-    }
+    // Load master resume on open
+    const resume = await loadMasterResume();
 
-    try {
-      basicJobData = await getFromStorageSync("currentJobData");
-      console.log(
-        "[Popup] Basic job data retrieved:",
-        basicJobData ? "Yes" : "No",
-      );
-    } catch (e) {
-      console.warn("[Popup] Could not get job data:", e);
-    }
-
-    if (pageText && pageText.length > 0) {
-      try {
-        console.log("[Popup] Checking if page is a job posting...");
-        console.log("[Popup] Page content length:", pageText.length);
-        console.log(
-          "[Popup] Page content preview:",
-          pageText.substring(0, 200),
-        );
-
-        // Pass content directly to Gemini
-        // The Gemini functions will handle both HTML and plain text analysis
-        const pageContent = pageText.substring(0, 16000);
-
-        try {
-          // First, check if this page actually contains a job posting
-          const isJobPosting = await isJobPostingPage(pageContent);
-          console.log("[Popup] isJobPosting result:", isJobPosting);
-
-          if (isJobPosting) {
-            console.log(
-              "[Popup] Page detected as job posting. Parsing details...",
-            );
-            // Parse using Gemini to extract job details
-            const parsedJobData = await parseJobFromHTML(pageContent);
-
-            if (parsedJobData) {
-              state.jobData = parsedJobData;
-              console.log(
-                "[Popup] Successfully parsed job data from page:",
-                state.jobData.title,
-              );
-            } else {
-              console.log(
-                "[Popup] Job parsing returned null - trying basic DOM extraction...",
-              );
-              // Fallback to basic job data if Gemini parsing fails
-              if (basicJobData) {
-                state.jobData = basicJobData;
-                console.log(
-                  "[Popup] Using fallback job data from DOM extraction",
-                );
-              }
-            }
-          } else {
-            console.log(
-              "[Popup] Gemini detection inconclusive. Checking basic DOM extraction...",
-            );
-            // Page is not recognized as a job posting by Gemini, but we may still have DOM data
-            // Use DOM data as it's often more reliable for structured job pages
-            if (basicJobData) {
-              state.jobData = basicJobData;
-              console.log("[Popup] Using DOM extraction data for job");
-            } else {
-              console.log(
-                "[Popup] No job posting detected and no DOM data found",
-              );
-            }
-          }
-        } catch (geminError) {
-          console.warn(
-            "[Popup] Gemini error, using DOM extraction as fallback...",
-            geminError,
-          );
-          // Gemini API error - fallback to basic job data
-          if (basicJobData) {
-            state.jobData = basicJobData;
-            console.log(
-              "[Popup] Gemini error occurred, using DOM extraction data",
-            );
-          } else {
-            console.error(
-              "[Popup] Both Gemini and DOM extraction failed, no job data available",
-            );
-          }
-        }
-      } catch (error) {
-        console.error("[Popup] Error in job detection flow:", error);
-        // Fallback to basic job data if error occurs
-        if (basicJobData) {
-          state.jobData = basicJobData;
-          console.log(
-            "[Popup] Error occurred, using fallback job data from DOM extraction",
-          );
-        }
-      }
-    } else if (basicJobData) {
-      // If no page text was captured but DOM extraction found data, use it
-      state.jobData = basicJobData;
-      console.log("[Popup] Using basic job data from content script");
-    } else {
-      console.log("[Popup] No job data or page text found in storage");
-    }
-
+    // Show initial UI
     updateUI();
   } catch (error) {
     console.error("Initialization error:", error);
     updateUI();
   }
 }
+
+// Listen for analyzeJob message from content script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "analyzeJob") {
+    console.log("[Popup] Received analyzeJob message with HTML");
+    state.pageHTML = request.pageHTML;
+    sendResponse({ success: true });
+    updateUI();
+  }
+});
 
 function updateUI() {
   // Hide everything first
