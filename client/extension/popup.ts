@@ -243,12 +243,13 @@ async function init() {
             }
           } else {
             console.log(
-              "[Popup] Gemini detected not a job posting. Checking basic DOM extraction...",
+              "[Popup] Gemini detection inconclusive. Checking basic DOM extraction...",
             );
-            // Page is not recognized as a job posting, try basic extraction as fallback
+            // Page is not recognized as a job posting by Gemini, but we may still have DOM data
+            // Use DOM data as it's often more reliable for structured job pages
             if (basicJobData) {
               state.jobData = basicJobData;
-              console.log("[Popup] Using basic job data from DOM extraction");
+              console.log("[Popup] Using DOM extraction data for job");
             } else {
               console.log(
                 "[Popup] No job posting detected and no DOM data found",
@@ -257,14 +258,18 @@ async function init() {
           }
         } catch (geminError) {
           console.warn(
-            "[Popup] Gemini error, trying basic extraction...",
+            "[Popup] Gemini error, using DOM extraction as fallback...",
             geminError,
           );
           // Gemini API error - fallback to basic job data
           if (basicJobData) {
             state.jobData = basicJobData;
             console.log(
-              "[Popup] Gemini error occurred, using basic job data from DOM extraction",
+              "[Popup] Gemini error occurred, using DOM extraction data",
+            );
+          } else {
+            console.error(
+              "[Popup] Both Gemini and DOM extraction failed, no job data available",
             );
           }
         }
@@ -279,7 +284,7 @@ async function init() {
         }
       }
     } else if (basicJobData) {
-      // Fallback if no page text was captured
+      // If no page text was captured but DOM extraction found data, use it
       state.jobData = basicJobData;
       console.log("[Popup] Using basic job data from content script");
     } else {
