@@ -13,10 +13,10 @@ interface PopupState {
 
 let state: PopupState = {
   masterResume: null,
+  pageHTML: null,
   jobData: null,
   tailoredResume: null,
-  atsScore: 0,
-  jobDescription: null,
+  atsScore: null,
 };
 
 console.log("[Popup] Script loaded, querying DOM elements...");
@@ -35,7 +35,6 @@ const tailorBtn = document.getElementById(
 const downloadBtn = document.getElementById(
   "download-btn",
 ) as HTMLButtonElement | null;
-const saveBtn = document.getElementById("save-btn") as HTMLButtonElement | null;
 const dashboardLink = document.getElementById(
   "dashboard-link",
 ) as HTMLAnchorElement | null;
@@ -48,6 +47,7 @@ console.log("[Popup] DOM elements found:", {
   successEl: !!successEl,
   buttonsEl: !!buttonsEl,
   tailorBtn: !!tailorBtn,
+  downloadBtn: !!downloadBtn,
 });
 
 // Helper to get data from chrome.storage.sync
