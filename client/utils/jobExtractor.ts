@@ -45,7 +45,10 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     { title: "[data-cy='job-title']", desc: "[data-cy='job-description']" },
     { title: ".jdMainSection h1", desc: ".jdMainSection" },
     // Additional Naukri selectors for different page versions
-    { title: "[data-cy='job-card-title']", desc: "[data-cy='job-card-description']" },
+    {
+      title: "[data-cy='job-card-title']",
+      desc: "[data-cy='job-card-description']",
+    },
     { title: ".jobTitle", desc: ".jobDescription" },
     { title: ".job-title", desc: ".job-description-text" },
   ];
@@ -76,7 +79,12 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
   for (const heading of allHeadings) {
     const text = heading.textContent?.trim() || "";
     // Skip navigation/generic headings
-    if (text.length > 5 && text.length < 200 && !text.includes("Job") && !text.includes("Naukri")) {
+    if (
+      text.length > 5 &&
+      text.length < 200 &&
+      !text.includes("Job") &&
+      !text.includes("Naukri")
+    ) {
       naukriTitle = text;
       break;
     }
@@ -108,8 +116,12 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     "main, article, [role='main'], .job-content, .jobsectionwrap, .jdMainSection",
   );
 
-  if ((h1?.textContent?.trim() || h2?.textContent?.trim()) && fallbackMainContent?.textContent) {
-    const title = h1?.textContent?.trim() || h2?.textContent?.trim() || "Unknown";
+  if (
+    (h1?.textContent?.trim() || h2?.textContent?.trim()) &&
+    fallbackMainContent?.textContent
+  ) {
+    const title =
+      h1?.textContent?.trim() || h2?.textContent?.trim() || "Unknown";
     const contentText = fallbackMainContent.textContent.trim();
     if (contentText.length > 200) {
       return {
