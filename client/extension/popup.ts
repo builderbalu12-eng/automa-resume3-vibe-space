@@ -4,6 +4,7 @@ import {
   calculateATSScore,
   extractJobRequirements,
   parseJobFromHTML,
+  isJobPostingPage,
 } from "@/services/gemini";
 import { saveApplication } from "@/services/mongodb";
 import { downloadResume, generateResumeDocx } from "@/services/resumeGenerator";
