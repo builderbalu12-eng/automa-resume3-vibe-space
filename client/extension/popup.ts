@@ -197,25 +197,50 @@ async function init() {
 
     if (pageHTML) {
       try {
-        console.log("Parsing HTML with Gemini...");
-        // Parse HTML using Gemini to extract job details
-        const parsedJobData = await parseJobFromHTML(pageHTML);
-        state.jobData = parsedJobData;
-        console.log("Successfully parsed job data from HTML:", state.jobData);
+        console.log("[Popup] Checking if page is a job posting...");
+        // First, check if this page actually contains a job posting
+        const isJobPosting = await isJobPostingPage(pageHTML);
+
+        if (isJobPosting) {
+          console.log("[Popup] Page detected as job posting. Parsing details...");
+          // Parse HTML using Gemini to extract job details
+          const parsedJobData = await parseJobFromHTML(pageHTML);
+
+          if (parsedJobData) {
+            state.jobData = parsedJobData;
+            console.log("[Popup] Successfully parsed job data from HTML:", state.jobData.title);
+          } else {
+            console.log("[Popup] Job parsing returned null - likely not a valid job posting");
+            // Fallback to basic job data if Gemini parsing fails
+            if (basicJobData) {
+              state.jobData = basicJobData;
+              console.log("[Popup] Using fallback job data from DOM extraction");
+            }
+          }
+        } else {
+          console.log("[Popup] Page is not a job posting. Checking basic DOM extraction...");
+          // Page is not recognized as a job posting, try basic extraction as fallback
+          if (basicJobData) {
+            state.jobData = basicJobData;
+            console.log("[Popup] Using basic job data from DOM extraction");
+          } else {
+            console.log("[Popup] No job posting detected and no DOM data found");
+          }
+        }
       } catch (error) {
-        console.error("Error parsing HTML with Gemini:", error);
-        // Fallback to basic job data if Gemini parsing fails
+        console.error("[Popup] Error in job detection flow:", error);
+        // Fallback to basic job data if error occurs
         if (basicJobData) {
           state.jobData = basicJobData;
-          console.log("Using fallback job data from DOM extraction");
+          console.log("[Popup] Error occurred, using fallback job data from DOM extraction");
         }
       }
     } else if (basicJobData) {
       // Fallback if no HTML was captured
       state.jobData = basicJobData;
-      console.log("Using basic job data from content script");
+      console.log("[Popup] Using basic job data from content script");
     } else {
-      console.log("No job data or HTML found in storage");
+      console.log("[Popup] No job data or HTML found in storage");
     }
 
     updateUI();
