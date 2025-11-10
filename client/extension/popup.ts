@@ -190,7 +190,10 @@ async function init() {
 
     try {
       basicJobData = await getFromStorageSync("currentJobData");
-      console.log("[Popup] Basic job data retrieved:", basicJobData ? "Yes" : "No");
+      console.log(
+        "[Popup] Basic job data retrieved:",
+        basicJobData ? "Yes" : "No",
+      );
     } catch (e) {
       console.warn("[Popup] Could not get job data:", e);
     }

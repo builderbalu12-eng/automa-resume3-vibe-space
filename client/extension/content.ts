@@ -144,7 +144,10 @@ function injectButton() {
       });
 
       console.log("[Content Script] Page data saved to chrome.storage.sync");
-      console.log("[Content Script] Page text length:", truncatedPageText.length);
+      console.log(
+        "[Content Script] Page text length:",
+        truncatedPageText.length,
+      );
       console.log("[Content Script] Basic job data extracted:", basicJobData);
 
       // Show success feedback
