@@ -177,26 +177,7 @@ observer.observe(document.body, {
 
 // Listen for messages from popup or background
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "getJobData") {
-    const jobData = extractJobDescriptionFromDOM();
-    sendResponse({ jobData: jobData || null });
-  } else if (request.action === "getPageHTML") {
-    const pageHTML = getPageHTML();
-    sendResponse({ html: pageHTML });
-  } else if (request.action === "getPageText") {
-    const pageText = getPageText();
-    sendResponse({ text: pageText });
-  } else if (request.action === "injectButton") {
-    injectButton();
-    sendResponse({ success: true });
-  } else if (request.action === "checkSync") {
-    console.log("[Content Script] checkSync message received");
-    sendResponse({ status: "Content script is active" });
-  } else if (request.action === "syncResume") {
-    console.log("[Content Script] Manual sync requested");
-    syncResumeToExtension();
-    sendResponse({ status: "Sync triggered" });
-  } else if (request.action === "getResume") {
+  if (request.action === "getResume") {
     // Send resume from localhost localStorage to popup
     try {
       const resumeKey = "resumematch_master_resume";
@@ -216,5 +197,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.error("[Content Script] Error getting resume:", e);
       sendResponse({ resume: null, error: (e as Error).message });
     }
+  } else if (request.action === "injectButton") {
+    injectButton();
+    sendResponse({ success: true });
   }
 });
