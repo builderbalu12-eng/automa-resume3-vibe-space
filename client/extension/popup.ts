@@ -253,132 +253,80 @@ function updateUI() {
     "<strong>No Job Posting Found</strong><span>Open this extension on a job posting page</span>";
 }
 
-tailorBtn.addEventListener("click", async () => {
-  if (!state.masterResume || !state.jobData) {
-    console.error("Missing data for tailoring:", {
-      hasResume: !!state.masterResume,
-      hasJobData: !!state.jobData,
-    });
-    return;
-  }
+if (tailorBtn) {
+  tailorBtn.addEventListener("click", async () => {
+    if (!state.masterResume || !state.pageHTML) {
+      console.error("Missing data for tailoring:", {
+        hasResume: !!state.masterResume,
+        hasPageHTML: !!state.pageHTML,
+      });
+      return;
+    }
 
-  loadingEl.classList.remove("hidden");
-  errorEl.classList.add("hidden");
-  successEl.classList.add("hidden");
-  tailorBtn.disabled = true;
+    loadingEl.classList.remove("hidden");
+    errorEl.classList.add("hidden");
+    successEl.classList.add("hidden");
+    tailorBtn.disabled = true;
 
-  try {
-    console.log("Starting resume tailoring...");
+    try {
+      console.log("[Popup] Starting job analysis and resume tailoring...");
 
-    // Extract job requirements
-    console.log("Extracting job requirements from description...");
-    state.jobDescription = await extractJobRequirements(
-      state.jobData.description,
-    );
-    console.log("Job requirements extracted");
+      // Call unified Gemini function
+      const result = await analyzeJobAndTailorResume(
+        state.pageHTML,
+        state.masterResume,
+      );
 
-    // Tailor resume
-    console.log("Tailoring resume for job...");
-    state.tailoredResume = await tailorResumeForJob(
-      state.masterResume,
-      state.jobDescription,
-    );
-    console.log("Resume tailored successfully");
+      console.log("[Popup] Job analysis complete:", result.jobData.title);
 
-    // Calculate ATS score
-    console.log("Calculating ATS score...");
-    const atsScoreData = await calculateATSScore(
-      state.tailoredResume,
-      state.jobDescription,
-    );
-    state.atsScore = atsScoreData.score;
-    console.log("ATS score calculated:", state.atsScore);
+      // Update state with results
+      state.jobData = result.jobData;
+      state.tailoredResume = result.tailoredResume;
+      state.atsScore = result.atsScore;
 
-    loadingEl.classList.add("hidden");
-    successEl.classList.remove("hidden");
-    successEl.textContent = `✓ Resume tailored! ATS Score: ${state.atsScore}%`;
-    downloadBtn.disabled = false;
-    saveBtn.disabled = false;
-    tailorBtn.textContent = "⚡ Tailor Again";
-    tailorBtn.disabled = false;
-  } catch (error) {
-    loadingEl.classList.add("hidden");
-    errorEl.classList.remove("hidden");
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    console.error("Tailoring error:", error);
-    errorEl.textContent = `✗ Error: ${errorMsg}`;
-    tailorBtn.disabled = false;
-  }
-});
+      loadingEl.classList.add("hidden");
+      successEl.classList.remove("hidden");
+      successEl.textContent = `✓ Resume tailored! ATS Score: ${state.atsScore.score}%`;
 
-downloadBtn.addEventListener("click", async () => {
-  if (!state.tailoredResume || !state.jobData) return;
+      // Update UI to show results
+      updateUI();
+    } catch (error) {
+      loadingEl.classList.add("hidden");
+      errorEl.classList.remove("hidden");
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("[Popup] Tailoring error:", error);
+      errorEl.textContent = `✗ Error: ${errorMsg}`;
+      tailorBtn.disabled = false;
+    }
+  });
+}
 
-  downloadBtn.disabled = true;
-  errorEl.classList.add("hidden");
-  successEl.classList.add("hidden");
+if (downloadBtn) {
+  downloadBtn.addEventListener("click", async () => {
+    if (!state.tailoredResume || !state.jobData) return;
 
-  try {
-    // Generate and download the resume
-    const blob = await generateResumeDocx(
-      state.tailoredResume,
-      state.jobData.company,
-      state.jobData.title,
-    );
-    const url = URL.createObjectURL(blob);
+    downloadBtn.disabled = true;
+    errorEl.classList.add("hidden");
+    successEl.classList.add("hidden");
 
-    const today = new Date().toISOString().split("T")[0];
-    const filename = `Resume_${state.jobData.company}_${state.jobData.title}_${today}.docx`;
+    try {
+      // Download as PDF
+      await downloadResumePDF(
+        state.tailoredResume,
+        state.jobData.company,
+        state.jobData.title,
+      );
 
-    // Use Chrome downloads API
-    chrome.downloads.download({
-      url,
-      filename,
-      saveAs: false,
-    });
-
-    successEl.classList.remove("hidden");
-    successEl.textContent = "✓ Resume downloaded!";
-    downloadBtn.disabled = false;
-  } catch (error) {
-    errorEl.classList.remove("hidden");
-    errorEl.textContent = `✗ Download failed: ${error instanceof Error ? error.message : "Unknown error"}`;
-    downloadBtn.disabled = false;
-  }
-});
-
-saveBtn.addEventListener("click", async () => {
-  if (!state.tailoredResume || !state.jobData || !state.masterResume) return;
-
-  saveBtn.disabled = true;
-  errorEl.classList.add("hidden");
-  successEl.classList.add("hidden");
-
-  try {
-    const application: ApplicationRecord = {
-      userId: "current-user",
-      jobTitle: state.jobData.title,
-      company: state.jobData.company,
-      jobUrl: state.jobData.url,
-      jobDescription: state.jobData,
-      originalResume: state.masterResume,
-      tailoredResume: state.tailoredResume,
-      atsScore: state.atsScore,
-      matchPercentage: state.atsScore,
-      appliedDate: new Date(),
-      status: "applied",
-    };
-
-    await saveApplication(application);
-    successEl.classList.remove("hidden");
-    successEl.textContent = "✓ Application saved to your history!";
-    saveBtn.disabled = false;
-  } catch (error) {
-    errorEl.classList.remove("hidden");
-    errorEl.textContent = `✗ Save failed: ${error instanceof Error ? error.message : "Unknown error"}`;
-    saveBtn.disabled = false;
-  }
-});
+      successEl.classList.remove("hidden");
+      successEl.textContent = "✓ Resume downloaded as PDF!";
+      downloadBtn.disabled = false;
+    } catch (error) {
+      errorEl.classList.remove("hidden");
+      errorEl.textContent = `✗ Download failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+      downloadBtn.disabled = false;
+    }
+  });
+}
 
 // Start initialization
 init();
