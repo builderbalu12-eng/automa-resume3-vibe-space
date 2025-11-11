@@ -126,13 +126,107 @@ export const Dashboard: React.FC = () => {
             <div className="hidden md:block">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-primary rounded-2xl blur-2xl opacity-20" />
-                <div className="relative bg-card rounded-2xl p-8 border border-border shadow-glow">
-                  <div className="space-y-4">
-                    <div className="h-12 bg-primary/10 rounded-lg animate-pulse" />
-                    <div className="h-8 bg-primary/5 rounded-lg animate-pulse w-2/3" />
-                    <div className="space-y-2">
-                      <div className="h-6 bg-primary/5 rounded-lg animate-pulse" />
-                      <div className="h-6 bg-primary/5 rounded-lg animate-pulse w-5/6" />
+                <div className="relative bg-card rounded-2xl p-6 border border-border shadow-glow">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold">
+                        {masterResume?.contact.name ?? "John Doe"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {masterResume?.contact.email ?? "john.doe@example.com"}
+                        {" • "}
+                        {masterResume?.contact.phone ?? "(555) 555-5555"}
+                      </p>
+
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        {masterResume?.summary ??
+                          "Experienced software engineer with a track record of building scalable web applications and improving product metrics."}
+                      </p>
+
+                      <div className="mt-4">
+                        <h4 className="text-sm font-semibold mb-2">Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {(masterResume?.skills ?? [
+                            "JavaScript",
+                            "React",
+                            "Node.js",
+                            "TypeScript",
+                            "AWS",
+                          ])
+                            .slice(0, 8)
+                            .map((s) => (
+                              <span
+                                key={s}
+                                className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <h4 className="text-sm font-semibold mb-2">Recent Role</h4>
+                        {(
+                          masterResume?.experience && masterResume.experience.length
+                            ? masterResume.experience.slice(0, 1)
+                            : [
+                                {
+                                  title: "Senior Software Engineer",
+                                  company: "Acme Corp",
+                                  startDate: "Jan 2020",
+                                  endDate: "Present",
+                                  description: [
+                                    "Led a team to build a customer-facing web app.",
+                                    "Improved load times by 40% through optimizations.",
+                                  ],
+                                },
+                              ]
+                        ).map((exp) => (
+                          <div key={exp.title} className="text-sm">
+                            <div className="font-semibold">{exp.title}</div>
+                            <div className="text-muted-foreground text-xs">
+                              {exp.company} • {exp.startDate} {exp.endDate ? `– ${exp.endDate}` : "– Present"}
+                            </div>
+                            <ul className="list-disc list-inside mt-2 text-muted-foreground text-xs">
+                              {exp.description.slice(0, 3).map((d, i) => (
+                                <li key={i}>{d}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="w-40 flex-shrink-0 text-right">
+                      <div className="text-sm text-muted-foreground">
+                        {masterResume?.contact.location ?? "San Francisco, CA"}
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2 items-end">
+                        {masterResume ? (
+                          <Link
+                            to="/tailor"
+                            className="inline-flex items-center px-3 py-1 rounded bg-primary/10 text-primary text-sm font-medium"
+                          >
+                            Tailor Resume
+                          </Link>
+                        ) : (
+                          <Link
+                            to="/upload"
+                            className="inline-flex items-center px-3 py-1 rounded bg-primary/10 text-primary text-sm font-medium"
+                          >
+                            Upload Resume
+                          </Link>
+                        )}
+
+                        <Link
+                          to="/history"
+                          className="inline-flex items-center px-3 py-1 rounded border border-border text-sm"
+                        >
+                          View History
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
