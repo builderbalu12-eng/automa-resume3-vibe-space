@@ -390,6 +390,14 @@ if (tailorBtn) {
                 console.log("[Popup] Application saved to chrome.storage.sync");
               }
             });
+
+            // Also mirror to localStorage so the web app preview reads it without extension context
+            try {
+              localStorage.setItem("resumematch_applications", JSON.stringify(apps));
+              console.log("[Popup] Application mirrored to localStorage");
+            } catch (e) {
+              console.warn("[Popup] Could not write to localStorage:", e);
+            }
           } catch (e) {
             console.error("[Popup] Error persisting application:", e);
           }
