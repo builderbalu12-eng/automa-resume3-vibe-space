@@ -1,4 +1,4 @@
-import { getMasterResume } from "@/utils/storage";
+import { getMasterResume, setMasterResume } from "@/utils/storage";
 import { analyzeJobAndTailorResume } from "@/services/gemini";
 import { downloadResumePDF } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
@@ -19,7 +19,7 @@ let state: PopupState = {
   atsScore: null,
 };
 
-console.log("[Popup] Script loaded, querying DOM elements...");
+console.log("[Popup] Script loaded at", new Date().toISOString());
 
 const statusEl = document.getElementById("status");
 const jobInfoEl = document.getElementById("job-info");
@@ -50,10 +50,11 @@ console.log("[Popup] DOM elements found:", {
   downloadBtn: !!downloadBtn,
 });
 
-// Helper to request resume from content script on localhost
-async function getResumeFromLocalhost(): Promise<any> {
+// Helper to get resume from localhost tabs
+async function getResumeFromLocalhost(): Promise<ResumeData | null> {
   return new Promise((resolve) => {
     try {
+      console.log("[Popup] Searching for localhost tabs...");
       chrome.tabs.query({ url: "http://localhost:*/*" }, (tabs) => {
         if (!tabs.length) {
           console.log("[Popup] No localhost tabs found");
@@ -61,23 +62,25 @@ async function getResumeFromLocalhost(): Promise<any> {
           return;
         }
 
+        console.log("[Popup] Found", tabs.length, "localhost tab(s)");
         const tab = tabs[0];
+        
         chrome.tabs.sendMessage(
           tab.id!,
           { action: "getResume" },
           (response) => {
             if (chrome.runtime.lastError) {
               console.warn(
-                "[Popup] Could not reach content script:",
-                chrome.runtime.lastError?.message || "Unknown error",
+                "[Popup] Could not reach localhost tab:",
+                chrome.runtime.lastError?.message,
               );
               resolve(null);
+            } else if (response?.resume) {
+              console.log("[Popup] Got resume from localhost:", response.resume.contact?.name);
+              resolve(response.resume);
             } else {
-              console.log(
-                "[Popup] Got resume from localhost:",
-                response?.resume ? "YES" : "NO",
-              );
-              resolve(response?.resume || null);
+              console.warn("[Popup] No resume in localhost response");
+              resolve(null);
             }
           },
         );
@@ -90,52 +93,39 @@ async function getResumeFromLocalhost(): Promise<any> {
 }
 
 // Load master resume on popup open
-async function loadMasterResume() {
+async function loadMasterResume(): Promise<ResumeData | null> {
   try {
     console.log("[Popup] Loading master resume...");
 
-    // Get master resume from browser storage
+    // Try 1: Get from chrome.storage.sync (works across extension contexts)
     let resume = await getMasterResume();
-    console.log(
-      "[Popup] Master resume loaded:",
-      resume ? "YES (Found)" : "NO (Not found)",
-    );
-
-    // If not found in chrome.storage, try to get from localhost content script
-    if (!resume) {
-      console.log("[Popup] Attempting to get resume from localhost...");
-      resume = await getResumeFromLocalhost();
-      console.log(
-        "[Popup] Master resume from localhost:",
-        resume ? "YES (Found)" : "NO (Not found)",
-      );
-
-      // If found, save it to chrome.storage for future use
-      if (resume) {
-        try {
-          await new Promise<void>((resolve) => {
-            chrome.storage.sync.set(
-              { resumematch_master_resume: JSON.stringify(resume) },
-              () => {
-                if (!chrome.runtime.lastError) {
-                  console.log("[Popup] Cached resume in chrome.storage.sync");
-                }
-                resolve();
-              },
-            );
-          });
-        } catch (e) {
-          console.warn("[Popup] Could not cache resume:", e);
-        }
-      }
-    }
-
     if (resume) {
-      console.log("[Popup] Resume name:", resume.contact?.name);
+      console.log("[Popup] ✓ Resume found in chrome.storage.sync:", resume.contact?.name);
       state.masterResume = resume;
+      return resume;
     }
 
-    return resume;
+    console.log("[Popup] Resume not in chrome.storage.sync, trying localhost...");
+
+    // Try 2: Get from localhost tab if available
+    resume = await getResumeFromLocalhost();
+    if (resume) {
+      console.log("[Popup] ✓ Resume found on localhost:", resume.contact?.name);
+      state.masterResume = resume;
+      
+      // Save to chrome.storage for future use
+      try {
+        await setMasterResume(resume);
+        console.log("[Popup] ✓ Resume cached to chrome.storage.sync");
+      } catch (e) {
+        console.warn("[Popup] Could not cache resume:", e);
+      }
+      
+      return resume;
+    }
+
+    console.warn("[Popup] Resume not found in any storage");
+    return null;
   } catch (error) {
     console.error("[Popup] Error loading resume:", error);
     return null;
@@ -145,14 +135,13 @@ async function loadMasterResume() {
 // Request page data from background service worker
 async function getPageDataFromBackground(): Promise<void> {
   return new Promise((resolve) => {
-    // Try multiple times in case data hasn't arrived yet
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 8; // Increased attempts for reliability
 
     const tryGetData = () => {
       attempts++;
       console.log(
-        `[Popup] Requesting page data from background (attempt ${attempts})`,
+        `[Popup] Requesting page data from background (attempt ${attempts}/${maxAttempts})`,
       );
 
       chrome.runtime.sendMessage({ action: "getPageData" }, (response) => {
@@ -162,23 +151,25 @@ async function getPageDataFromBackground(): Promise<void> {
             chrome.runtime.lastError.message,
           );
           if (attempts < maxAttempts) {
-            setTimeout(tryGetData, 200);
+            setTimeout(tryGetData, 150);
           } else {
+            console.warn("[Popup] Failed to get page data after", maxAttempts, "attempts");
             resolve();
           }
         } else if (response?.pageData?.pageHTML) {
           console.log(
-            "[Popup] Received page data from background:",
+            "[Popup] ✓ Received page data from background:",
             response.pageData.pageHTML.length,
             "chars",
           );
           state.pageHTML = response.pageData.pageHTML;
           resolve();
         } else {
-          console.log("[Popup] No page data available yet");
+          console.log("[Popup] No page data in response yet");
           if (attempts < maxAttempts) {
-            setTimeout(tryGetData, 200);
+            setTimeout(tryGetData, 150);
           } else {
+            console.warn("[Popup] Page data not available");
             resolve();
           }
         }
@@ -194,37 +185,41 @@ async function init() {
   try {
     console.log("[Popup] Initializing extension popup...");
 
-    // Load master resume on open
+    // Load master resume (this is important)
     const resume = await loadMasterResume();
 
-    // Get page data from background service worker if available
+    // Get page data from background service worker
     await getPageDataFromBackground();
 
-    // Show initial UI
+    // Update UI with current state
     updateUI();
   } catch (error) {
-    console.error("Initialization error:", error);
+    console.error("[Popup] Initialization error:", error);
     updateUI();
   }
 }
 
 function updateUI() {
   // Hide everything first
-  statusEl.classList.add("hidden");
-  jobInfoEl.classList.add("hidden");
-  loadingEl.classList.add("hidden");
-  errorEl.classList.add("hidden");
-  successEl.classList.add("hidden");
-  buttonsEl.classList.add("hidden");
+  statusEl?.classList.add("hidden");
+  jobInfoEl?.classList.add("hidden");
+  loadingEl?.classList.add("hidden");
+  errorEl?.classList.add("hidden");
+  successEl?.classList.add("hidden");
+  buttonsEl?.classList.add("hidden");
 
   if (!state.masterResume) {
     // Show error if no master resume
-    statusEl.classList.remove("hidden");
-    const statusIcon = statusEl.querySelector(".status-icon")!;
-    const statusText = statusEl.querySelector(".status-text")!;
-    statusIcon.textContent = "⚠️";
-    statusText.innerHTML =
-      "<strong>No Master Resume</strong><span>Upload your resume on the dashboard first</span>";
+    if (statusEl) {
+      statusEl.classList.remove("hidden");
+      const statusIcon = statusEl.querySelector(".status-icon");
+      const statusText = statusEl.querySelector(".status-text");
+      if (statusIcon) statusIcon.textContent = "⚠️";
+      if (statusText) {
+        statusText.innerHTML =
+          "<strong>No Master Resume</strong><span>Upload your resume on the dashboard first</span>";
+      }
+    }
 
     if (dashboardLink) {
       dashboardLink.onclick = (e) => {
@@ -239,74 +234,92 @@ function updateUI() {
 
   // If page HTML was received but not analyzed yet
   if (state.pageHTML && !state.jobData) {
-    statusEl.classList.remove("hidden");
-    const statusIcon = statusEl.querySelector(".status-icon")!;
-    const statusText = statusEl.querySelector(".status-text")!;
-    statusIcon.textContent = "📄";
-    statusText.innerHTML =
-      "<strong>Job Posting Detected</strong><span>Click below to analyze and tailor your resume</span>";
+    if (statusEl) {
+      statusEl.classList.remove("hidden");
+      const statusIcon = statusEl.querySelector(".status-icon");
+      const statusText = statusEl.querySelector(".status-text");
+      if (statusIcon) statusIcon.textContent = "📄";
+      if (statusText) {
+        statusText.innerHTML =
+          "<strong>Job Posting Detected</strong><span>Click below to analyze and tailor your resume</span>";
+      }
+    }
 
-    buttonsEl.classList.remove("hidden");
+    if (buttonsEl) buttonsEl.classList.remove("hidden");
+    
     // Show tailor button
     if (tailorBtn) {
       tailorBtn.textContent = "⚡ Analyze & Tailor Resume";
       tailorBtn.disabled = false;
+      tailorBtn.style.opacity = "1";
     }
     return;
   }
 
   // Show results if job has been analyzed
   if (state.jobData && state.tailoredResume && state.atsScore) {
-    statusEl.classList.remove("hidden");
-    const statusIcon = statusEl.querySelector(".status-icon")!;
-    const statusText = statusEl.querySelector(".status-text")!;
-    statusIcon.textContent = "✅";
-    statusText.innerHTML = `<strong>Resume Tailored</strong><span>${state.jobData.title} at ${state.jobData.company}</span>`;
+    if (statusEl) {
+      statusEl.classList.remove("hidden");
+      const statusIcon = statusEl.querySelector(".status-icon");
+      const statusText = statusEl.querySelector(".status-text");
+      if (statusIcon) statusIcon.textContent = "✅";
+      if (statusText) {
+        statusText.innerHTML = `<strong>Resume Tailored</strong><span>${state.jobData.title} at ${state.jobData.company}</span>`;
+      }
+    }
 
-    jobInfoEl.classList.remove("hidden");
-    const jobTitleEl = document.getElementById("job-title");
-    const jobCompanyEl = document.getElementById("job-company");
-    const atsScoreEl = document.getElementById("ats-score");
-    const summaryEl = document.getElementById("summary");
+    if (jobInfoEl) {
+      jobInfoEl.classList.remove("hidden");
+      const jobTitleEl = document.getElementById("job-title");
+      const jobCompanyEl = document.getElementById("job-company");
+      const atsScoreEl = document.getElementById("ats-score");
+      const summaryEl = document.getElementById("summary");
 
-    if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
-    if (jobCompanyEl)
-      jobCompanyEl.textContent = state.jobData.company || "Unknown";
-    if (atsScoreEl) atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
-    if (summaryEl)
-      summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
+      if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
+      if (jobCompanyEl) jobCompanyEl.textContent = state.jobData.company || "Unknown";
+      if (atsScoreEl) atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
+      if (summaryEl) {
+        summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
+      }
+    }
 
-    buttonsEl.classList.remove("hidden");
+    if (buttonsEl) buttonsEl.classList.remove("hidden");
+    
     // Show download button
     if (downloadBtn) {
       downloadBtn.disabled = false;
+      downloadBtn.style.opacity = "1";
     }
     return;
   }
 
   // Default: no job posting
-  statusEl.classList.remove("hidden");
-  const statusIcon = statusEl.querySelector(".status-icon")!;
-  const statusText = statusEl.querySelector(".status-text")!;
-  statusIcon.textContent = "ℹ️";
-  statusText.innerHTML =
-    "<strong>No Job Posting Found</strong><span>Open this extension on a job posting page</span>";
+  if (statusEl) {
+    statusEl.classList.remove("hidden");
+    const statusIcon = statusEl.querySelector(".status-icon");
+    const statusText = statusEl.querySelector(".status-text");
+    if (statusIcon) statusIcon.textContent = "ℹ️";
+    if (statusText) {
+      statusText.innerHTML =
+        "<strong>No Job Posting Found</strong><span>Click the 'Analyse' button on a job posting page</span>";
+    }
+  }
 }
 
 if (tailorBtn) {
   tailorBtn.addEventListener("click", async () => {
     if (!state.masterResume || !state.pageHTML) {
-      console.error("Missing data for tailoring:", {
+      console.error("[Popup] Missing data for tailoring:", {
         hasResume: !!state.masterResume,
         hasPageHTML: !!state.pageHTML,
       });
       return;
     }
 
-    loadingEl.classList.remove("hidden");
-    errorEl.classList.add("hidden");
-    successEl.classList.add("hidden");
-    tailorBtn.disabled = true;
+    if (loadingEl) loadingEl.classList.remove("hidden");
+    if (errorEl) errorEl.classList.add("hidden");
+    if (successEl) successEl.classList.add("hidden");
+    if (tailorBtn) tailorBtn.disabled = true;
 
     try {
       console.log("[Popup] Starting job analysis and resume tailoring...");
@@ -317,26 +330,30 @@ if (tailorBtn) {
         state.masterResume,
       );
 
-      console.log("[Popup] Job analysis complete:", result.jobData.title);
+      console.log("[Popup] ✓ Job analysis complete:", result.jobData.title);
 
       // Update state with results
       state.jobData = result.jobData;
       state.tailoredResume = result.tailoredResume;
       state.atsScore = result.atsScore;
 
-      loadingEl.classList.add("hidden");
-      successEl.classList.remove("hidden");
-      successEl.textContent = `✓ Resume tailored! ATS Score: ${state.atsScore.score}%`;
+      if (loadingEl) loadingEl.classList.add("hidden");
+      if (successEl) {
+        successEl.classList.remove("hidden");
+        successEl.textContent = `✓ Resume tailored! ATS Score: ${state.atsScore.score}%`;
+      }
 
       // Update UI to show results
       updateUI();
     } catch (error) {
-      loadingEl.classList.add("hidden");
-      errorEl.classList.remove("hidden");
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      if (loadingEl) loadingEl.classList.add("hidden");
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        errorEl.textContent = `✗ Error: ${errorMsg}`;
+      }
       console.error("[Popup] Tailoring error:", error);
-      errorEl.textContent = `✗ Error: ${errorMsg}`;
-      tailorBtn.disabled = false;
+      if (tailorBtn) tailorBtn.disabled = false;
     }
   });
 }
@@ -345,11 +362,13 @@ if (downloadBtn) {
   downloadBtn.addEventListener("click", async () => {
     if (!state.tailoredResume || !state.jobData) return;
 
-    downloadBtn.disabled = true;
-    errorEl.classList.add("hidden");
-    successEl.classList.add("hidden");
+    if (downloadBtn) downloadBtn.disabled = true;
+    if (errorEl) errorEl.classList.add("hidden");
+    if (successEl) successEl.classList.add("hidden");
 
     try {
+      console.log("[Popup] Downloading tailored resume as PDF...");
+      
       // Download as PDF
       await downloadResumePDF(
         state.tailoredResume,
@@ -357,16 +376,22 @@ if (downloadBtn) {
         state.jobData.title,
       );
 
-      successEl.classList.remove("hidden");
-      successEl.textContent = "✓ Resume downloaded as PDF!";
-      downloadBtn.disabled = false;
+      if (successEl) {
+        successEl.classList.remove("hidden");
+        successEl.textContent = "✓ Resume downloaded as PDF!";
+      }
+      if (downloadBtn) downloadBtn.disabled = false;
     } catch (error) {
-      errorEl.classList.remove("hidden");
-      errorEl.textContent = `✗ Download failed: ${error instanceof Error ? error.message : "Unknown error"}`;
-      downloadBtn.disabled = false;
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+        errorEl.textContent = `✗ Download failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+      }
+      console.error("[Popup] Download error:", error);
+      if (downloadBtn) downloadBtn.disabled = false;
     }
   });
 }
 
-// Start initialization
+// Start initialization when popup opens
+console.log("[Popup] Starting initialization...");
 init();
