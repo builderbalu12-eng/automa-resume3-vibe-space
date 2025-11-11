@@ -64,7 +64,7 @@ async function getResumeFromLocalhost(): Promise<ResumeData | null> {
 
         console.log("[Popup] Found", tabs.length, "localhost tab(s)");
         const tab = tabs[0];
-        
+
         chrome.tabs.sendMessage(
           tab.id!,
           { action: "getResume" },
@@ -76,7 +76,10 @@ async function getResumeFromLocalhost(): Promise<ResumeData | null> {
               );
               resolve(null);
             } else if (response?.resume) {
-              console.log("[Popup] Got resume from localhost:", response.resume.contact?.name);
+              console.log(
+                "[Popup] Got resume from localhost:",
+                response.resume.contact?.name,
+              );
               resolve(response.resume);
             } else {
               console.warn("[Popup] No resume in localhost response");
@@ -100,19 +103,24 @@ async function loadMasterResume(): Promise<ResumeData | null> {
     // Try 1: Get from chrome.storage.sync (works across extension contexts)
     let resume = await getMasterResume();
     if (resume) {
-      console.log("[Popup] ✓ Resume found in chrome.storage.sync:", resume.contact?.name);
+      console.log(
+        "[Popup] ✓ Resume found in chrome.storage.sync:",
+        resume.contact?.name,
+      );
       state.masterResume = resume;
       return resume;
     }
 
-    console.log("[Popup] Resume not in chrome.storage.sync, trying localhost...");
+    console.log(
+      "[Popup] Resume not in chrome.storage.sync, trying localhost...",
+    );
 
     // Try 2: Get from localhost tab if available
     resume = await getResumeFromLocalhost();
     if (resume) {
       console.log("[Popup] ✓ Resume found on localhost:", resume.contact?.name);
       state.masterResume = resume;
-      
+
       // Save to chrome.storage for future use
       try {
         await setMasterResume(resume);
@@ -120,7 +128,7 @@ async function loadMasterResume(): Promise<ResumeData | null> {
       } catch (e) {
         console.warn("[Popup] Could not cache resume:", e);
       }
-      
+
       return resume;
     }
 
@@ -153,7 +161,11 @@ async function getPageDataFromBackground(): Promise<void> {
           if (attempts < maxAttempts) {
             setTimeout(tryGetData, 150);
           } else {
-            console.warn("[Popup] Failed to get page data after", maxAttempts, "attempts");
+            console.warn(
+              "[Popup] Failed to get page data after",
+              maxAttempts,
+              "attempts",
+            );
             resolve();
           }
         } else if (response?.pageData?.pageHTML) {
@@ -246,7 +258,7 @@ function updateUI() {
     }
 
     if (buttonsEl) buttonsEl.classList.remove("hidden");
-    
+
     // Show tailor button
     if (tailorBtn) {
       tailorBtn.textContent = "⚡ Analyze & Tailor Resume";
@@ -276,7 +288,8 @@ function updateUI() {
       const summaryEl = document.getElementById("summary");
 
       if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
-      if (jobCompanyEl) jobCompanyEl.textContent = state.jobData.company || "Unknown";
+      if (jobCompanyEl)
+        jobCompanyEl.textContent = state.jobData.company || "Unknown";
       if (atsScoreEl) atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
       if (summaryEl) {
         summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
@@ -284,7 +297,7 @@ function updateUI() {
     }
 
     if (buttonsEl) buttonsEl.classList.remove("hidden");
-    
+
     // Show download button
     if (downloadBtn) {
       downloadBtn.disabled = false;
@@ -349,7 +362,8 @@ if (tailorBtn) {
       if (loadingEl) loadingEl.classList.add("hidden");
       if (errorEl) {
         errorEl.classList.remove("hidden");
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
         errorEl.textContent = `✗ Error: ${errorMsg}`;
       }
       console.error("[Popup] Tailoring error:", error);
@@ -368,7 +382,7 @@ if (downloadBtn) {
 
     try {
       console.log("[Popup] Downloading tailored resume as PDF...");
-      
+
       // Download as PDF
       await downloadResumePDF(
         state.tailoredResume,

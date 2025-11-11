@@ -24,7 +24,10 @@ function injectButton() {
     document.body.appendChild(button);
     injectedButton = true;
 
-    console.log("[Content Script] Button injected successfully at", new Date().toISOString());
+    console.log(
+      "[Content Script] Button injected successfully at",
+      new Date().toISOString(),
+    );
 
     button.addEventListener("click", async () => {
       console.log("[Content Script] Button clicked");

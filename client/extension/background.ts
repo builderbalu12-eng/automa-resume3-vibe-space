@@ -16,13 +16,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       htmlLength: request.pageHTML?.length,
       url: request.pageURL,
     });
-    
+
     // Store page data from content script
     pageData = {
       pageHTML: request.pageHTML,
       pageURL: request.pageURL,
     };
-    
+
     sendResponse({ success: true });
 
     // Open the popup after a short delay to ensure it can fetch the data
