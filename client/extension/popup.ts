@@ -367,7 +367,8 @@ if (tailorBtn) {
           originalResume: state.masterResume,
           tailoredResume: state.tailoredResume,
           atsScore: state.atsScore.score || 0,
-          matchPercentage: state.atsScore.matchPercentage || state.atsScore.score || 0,
+          matchPercentage:
+            state.atsScore.matchPercentage || state.atsScore.score || 0,
           appliedDate: new Date().toISOString(),
           status: "applied",
           createdAt: new Date().toISOString(),
@@ -379,21 +380,33 @@ if (tailorBtn) {
             const existing = res["resumematch_applications"];
             let apps = [];
             if (existing) {
-              apps = typeof existing === "string" ? JSON.parse(existing) : existing;
+              apps =
+                typeof existing === "string" ? JSON.parse(existing) : existing;
             }
             apps.push(appRecord);
             // Save back as stringified JSON for compatibility with web app
-            chrome.storage.sync.set({ resumematch_applications: JSON.stringify(apps) }, () => {
-              if (chrome.runtime.lastError) {
-                console.warn("[Popup] Failed to save application to chrome.storage.sync:", chrome.runtime.lastError);
-              } else {
-                console.log("[Popup] Application saved to chrome.storage.sync");
-              }
-            });
+            chrome.storage.sync.set(
+              { resumematch_applications: JSON.stringify(apps) },
+              () => {
+                if (chrome.runtime.lastError) {
+                  console.warn(
+                    "[Popup] Failed to save application to chrome.storage.sync:",
+                    chrome.runtime.lastError,
+                  );
+                } else {
+                  console.log(
+                    "[Popup] Application saved to chrome.storage.sync",
+                  );
+                }
+              },
+            );
 
             // Also mirror to localStorage so the web app preview reads it without extension context
             try {
-              localStorage.setItem("resumematch_applications", JSON.stringify(apps));
+              localStorage.setItem(
+                "resumematch_applications",
+                JSON.stringify(apps),
+              );
               console.log("[Popup] Application mirrored to localStorage");
             } catch (e) {
               console.warn("[Popup] Could not write to localStorage:", e);
