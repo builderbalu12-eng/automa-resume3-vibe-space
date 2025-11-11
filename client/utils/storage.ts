@@ -146,7 +146,10 @@ export async function setMasterResume(resume: ResumeData): Promise<void> {
           { [STORAGE_KEYS.MASTER_RESUME]: JSON.stringify(resume) },
           () => {
             if (chrome.runtime.lastError) {
-              console.warn("Error saving to chrome.storage:", chrome.runtime.lastError);
+              console.warn(
+                "Error saving to chrome.storage:",
+                chrome.runtime.lastError,
+              );
               reject(chrome.runtime.lastError);
             } else {
               console.log("Master resume saved to chrome.storage.sync");

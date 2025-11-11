@@ -155,37 +155,34 @@ async function getPageDataFromBackground(): Promise<void> {
         `[Popup] Requesting page data from background (attempt ${attempts})`,
       );
 
-      chrome.runtime.sendMessage(
-        { action: "getPageData" },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.warn(
-              "[Popup] Message error:",
-              chrome.runtime.lastError.message,
-            );
-            if (attempts < maxAttempts) {
-              setTimeout(tryGetData, 200);
-            } else {
-              resolve();
-            }
-          } else if (response?.pageData?.pageHTML) {
-            console.log(
-              "[Popup] Received page data from background:",
-              response.pageData.pageHTML.length,
-              "chars",
-            );
-            state.pageHTML = response.pageData.pageHTML;
-            resolve();
+      chrome.runtime.sendMessage({ action: "getPageData" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn(
+            "[Popup] Message error:",
+            chrome.runtime.lastError.message,
+          );
+          if (attempts < maxAttempts) {
+            setTimeout(tryGetData, 200);
           } else {
-            console.log("[Popup] No page data available yet");
-            if (attempts < maxAttempts) {
-              setTimeout(tryGetData, 200);
-            } else {
-              resolve();
-            }
+            resolve();
           }
-        },
-      );
+        } else if (response?.pageData?.pageHTML) {
+          console.log(
+            "[Popup] Received page data from background:",
+            response.pageData.pageHTML.length,
+            "chars",
+          );
+          state.pageHTML = response.pageData.pageHTML;
+          resolve();
+        } else {
+          console.log("[Popup] No page data available yet");
+          if (attempts < maxAttempts) {
+            setTimeout(tryGetData, 200);
+          } else {
+            resolve();
+          }
+        }
+      });
     };
 
     tryGetData();

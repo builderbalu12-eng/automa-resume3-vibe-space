@@ -28,17 +28,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       chrome.action.setBadgeBackgroundColor({ color: "#6633ff", tabId });
 
       // Inject the button
-      chrome.tabs.sendMessage(
-        tabId,
-        { action: "injectButton" },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.log("[Background] Could not inject button:", chrome.runtime.lastError.message);
-          } else {
-            console.log("[Background] Button injected successfully");
-          }
+      chrome.tabs.sendMessage(tabId, { action: "injectButton" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log(
+            "[Background] Could not inject button:",
+            chrome.runtime.lastError.message,
+          );
+        } else {
+          console.log("[Background] Button injected successfully");
         }
-      );
+      });
     }
   }
 });

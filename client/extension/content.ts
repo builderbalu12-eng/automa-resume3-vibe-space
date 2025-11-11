@@ -104,44 +104,39 @@ observer.observe(document.body, {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getResume") {
     // Send resume from chrome.storage.sync
-    chrome.storage.sync.get(
-      ["resumematch_master_resume"],
-      (result) => {
-        try {
-          const resumeData = result["resumematch_master_resume"];
-          if (resumeData) {
-            const parsed =
-              typeof resumeData === "string"
-                ? JSON.parse(resumeData)
-                : resumeData;
+    chrome.storage.sync.get(["resumematch_master_resume"], (result) => {
+      try {
+        const resumeData = result["resumematch_master_resume"];
+        if (resumeData) {
+          const parsed =
+            typeof resumeData === "string"
+              ? JSON.parse(resumeData)
+              : resumeData;
+          console.log(
+            "[Content Script] Sending resume from chrome.storage:",
+            parsed.contact?.name,
+          );
+          sendResponse({ resume: parsed });
+        } else {
+          // Try localStorage as fallback
+          const localResume = localStorage.getItem("resumematch_master_resume");
+          if (localResume) {
+            const parsed = JSON.parse(localResume);
             console.log(
-              "[Content Script] Sending resume from chrome.storage:",
+              "[Content Script] Sending resume from localStorage:",
               parsed.contact?.name,
             );
             sendResponse({ resume: parsed });
           } else {
-            // Try localStorage as fallback
-            const localResume = localStorage.getItem(
-              "resumematch_master_resume",
-            );
-            if (localResume) {
-              const parsed = JSON.parse(localResume);
-              console.log(
-                "[Content Script] Sending resume from localStorage:",
-                parsed.contact?.name,
-              );
-              sendResponse({ resume: parsed });
-            } else {
-              console.warn("[Content Script] No resume found");
-              sendResponse({ resume: null });
-            }
+            console.warn("[Content Script] No resume found");
+            sendResponse({ resume: null });
           }
-        } catch (e) {
-          console.error("[Content Script] Error getting resume:", e);
-          sendResponse({ resume: null, error: (e as Error).message });
         }
-      },
-    );
+      } catch (e) {
+        console.error("[Content Script] Error getting resume:", e);
+        sendResponse({ resume: null, error: (e as Error).message });
+      }
+    });
     return true; // Will respond asynchronously
   } else if (request.action === "injectButton") {
     console.log("[Content Script] Received inject button request");
