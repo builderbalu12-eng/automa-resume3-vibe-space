@@ -22,7 +22,8 @@ async function loadHtml2Pdf(): Promise<any> {
     }
 
     const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
     script.onload = () => {
       resolve((window as any).html2pdf);
     };
@@ -88,7 +89,9 @@ async function generatePDFBlobProper(
                 <div style="font-size: 11px; color: #666; margin: 2px 0;">${exp.company} | ${dateRange}</div>
                 <ul style="margin: 3px 0 0 20px; font-size: 11px; line-height: 1.4; padding: 0;">
                   ${exp.description
-                    .map((desc) => `<li style="margin-bottom: 2px;">${desc}</li>`)
+                    .map(
+                      (desc) => `<li style="margin-bottom: 2px;">${desc}</li>`,
+                    )
                     .join("")}
                 </ul>
               </div>
@@ -139,7 +142,7 @@ async function generatePDFBlobProper(
 
   try {
     const html2pdf = await loadHtml2Pdf();
-    
+
     // Create element to convert
     const element = document.createElement("div");
     element.innerHTML = htmlContent;
@@ -170,7 +173,9 @@ async function generatePDFBlobProper(
     });
   } catch (error) {
     console.error("Failed to generate PDF:", error);
-    throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `PDF generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -424,8 +429,9 @@ export async function downloadResumePDF(
 ): Promise<void> {
   try {
     const html2pdf = await loadHtml2Pdf();
-    
-    const { contact, summary, skills, experience, education, projects } = resume;
+
+    const { contact, summary, skills, experience, education, projects } =
+      resume;
 
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px;">
@@ -473,7 +479,10 @@ export async function downloadResumePDF(
                   <div style="font-size: 11px; color: #666; margin: 2px 0;">${exp.company} | ${dateRange}</div>
                   <ul style="margin: 3px 0 0 20px; font-size: 11px; line-height: 1.4; padding: 0;">
                     ${exp.description
-                      .map((desc) => `<li style="margin-bottom: 2px;">${desc}</li>`)
+                      .map(
+                        (desc) =>
+                          `<li style="margin-bottom: 2px;">${desc}</li>`,
+                      )
                       .join("")}
                   </ul>
                 </div>
@@ -528,8 +537,14 @@ export async function downloadResumePDF(
     document.body.appendChild(element);
 
     const today = new Date().toISOString().split("T")[0];
-    const sanitizedCompany = (company || "Company").replace(/[/\\?%*:|"<>]/g, "");
-    const sanitizedTitle = (jobTitle || "Position").replace(/[/\\?%*:|"<>]/g, "");
+    const sanitizedCompany = (company || "Company").replace(
+      /[/\\?%*:|"<>]/g,
+      "",
+    );
+    const sanitizedTitle = (jobTitle || "Position").replace(
+      /[/\\?%*:|"<>]/g,
+      "",
+    );
 
     await html2pdf()
       .set({
@@ -545,6 +560,8 @@ export async function downloadResumePDF(
     document.body.removeChild(element);
   } catch (error) {
     console.error("PDF download error:", error);
-    throw new Error(`Failed to download PDF: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to download PDF: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
