@@ -527,7 +527,7 @@ if (customAnalyseBtn) {
     } finally {
       if (customAnalyseBtn) {
         customAnalyseBtn.disabled = false;
-        customAnalyseBtn.textContent = "CustomAnalyse for current page";
+        customAnalyseBtn.textContent = "CustomAnaylse for current page";
       }
     }
   });
