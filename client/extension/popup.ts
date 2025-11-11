@@ -356,6 +356,48 @@ if (tailorBtn) {
         successEl.textContent = `✓ Resume tailored! ATS Score: ${state.atsScore.score}%`;
       }
 
+      // Persist application to extension storage so web app history reflects it
+      try {
+        const appRecord = {
+          userId: "current-user",
+          jobTitle: state.jobData.title || "Unknown",
+          company: state.jobData.company || "Unknown",
+          jobUrl: undefined,
+          jobDescription: state.jobData,
+          originalResume: state.masterResume,
+          tailoredResume: state.tailoredResume,
+          atsScore: state.atsScore.score || 0,
+          matchPercentage: state.atsScore.matchPercentage || state.atsScore.score || 0,
+          appliedDate: new Date().toISOString(),
+          status: "applied",
+          createdAt: new Date().toISOString(),
+        };
+
+        // Read existing applications
+        chrome.storage.sync.get(["resumematch_applications"], (res) => {
+          try {
+            const existing = res["resumematch_applications"];
+            let apps = [];
+            if (existing) {
+              apps = typeof existing === "string" ? JSON.parse(existing) : existing;
+            }
+            apps.push(appRecord);
+            // Save back as stringified JSON for compatibility with web app
+            chrome.storage.sync.set({ resumematch_applications: JSON.stringify(apps) }, () => {
+              if (chrome.runtime.lastError) {
+                console.warn("[Popup] Failed to save application to chrome.storage.sync:", chrome.runtime.lastError);
+              } else {
+                console.log("[Popup] Application saved to chrome.storage.sync");
+              }
+            });
+          } catch (e) {
+            console.error("[Popup] Error persisting application:", e);
+          }
+        });
+      } catch (e) {
+        console.warn("[Popup] Could not persist application:", e);
+      }
+
       // Update UI to show results
       updateUI();
     } catch (error) {
