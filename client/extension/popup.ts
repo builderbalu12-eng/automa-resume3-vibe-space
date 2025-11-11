@@ -491,16 +491,40 @@ if (customAnalyseBtn) {
         customAnalyseBtn.textContent = "⏳ Analyzing current page...";
       }
 
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tab = tabs[0];
+      const getActiveTab = (): Promise<chrome.tabs.Tab | null> =>
+        new Promise((resolve) => {
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            resolve(tabs && tabs.length ? tabs[0] : null);
+          });
+        });
+
+      const execCapture = (tabId: number): Promise<{ html: string; url: string } | null> =>
+        new Promise((resolve) => {
+          try {
+            chrome.scripting.executeScript(
+              {
+                target: { tabId },
+                func: () => ({ html: document.documentElement.outerHTML, url: location.href }),
+              },
+              (results: any) => {
+                if (chrome.runtime.lastError) {
+                  console.warn("[Popup] executeScript error:", chrome.runtime.lastError.message);
+                  resolve(null);
+                } else {
+                  resolve(results && results[0] && results[0].result ? results[0].result : null);
+                }
+              },
+            );
+          } catch (e) {
+            console.warn("[Popup] executeScript threw:", e);
+            resolve(null);
+          }
+        });
+
+      const tab = await getActiveTab();
       if (!tab?.id) throw new Error("No active tab found");
 
-      const results = (await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => ({ html: document.documentElement.outerHTML, url: location.href }),
-      })) as unknown as Array<{ result: { html: string; url: string } }>;
-
-      const payload = results && results[0] && results[0].result;
+      const payload = await execCapture(tab.id);
       if (!payload?.html) throw new Error("Could not capture page content");
 
       state.pageHTML = payload.html;
