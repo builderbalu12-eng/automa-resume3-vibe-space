@@ -133,35 +133,30 @@ export async function getMasterResume(): Promise<ResumeData | null> {
 }
 
 export async function setMasterResume(resume: ResumeData): Promise<void> {
-  // Always save to localStorage as primary storage (works in all contexts)
+  // Save to localStorage first (works in all contexts)
   localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, JSON.stringify(resume));
   console.log("Master resume saved to localStorage");
 
-  // Also save to chrome.storage.sync if available (for extension access)
+  // Also save to chrome.storage.sync if available (for extension popup access)
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
-    try {
-      // Store as JSON string to ensure compatibility
-      return new Promise<void>((resolve, reject) => {
-        chrome.storage.sync.set(
-          { [STORAGE_KEYS.MASTER_RESUME]: JSON.stringify(resume) },
-          () => {
-            if (chrome.runtime.lastError) {
-              console.warn(
-                "Error saving to chrome.storage:",
-                chrome.runtime.lastError,
-              );
-              reject(chrome.runtime.lastError);
-            } else {
-              console.log("Master resume saved to chrome.storage.sync");
-              resolve();
-            }
-          },
-        );
-      });
-    } catch (e) {
-      console.warn("Could not save to chrome.storage:", e);
-      // But don't fail - localStorage is still saved
-    }
+    return new Promise<void>((resolve) => {
+      chrome.storage.sync.set(
+        { [STORAGE_KEYS.MASTER_RESUME]: JSON.stringify(resume) },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.warn(
+              "Error saving to chrome.storage:",
+              chrome.runtime.lastError,
+            );
+            // Still resolve even if chrome.storage fails, localStorage is saved
+            resolve();
+          } else {
+            console.log("Master resume saved to chrome.storage.sync");
+            resolve();
+          }
+        },
+      );
+    });
   }
 }
 
