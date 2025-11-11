@@ -26,6 +26,19 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       // Update extension badge to indicate it's a job site
       chrome.action.setBadgeText({ text: "✓", tabId });
       chrome.action.setBadgeBackgroundColor({ color: "#6633ff", tabId });
+
+      // Inject the button
+      chrome.tabs.sendMessage(
+        tabId,
+        { action: "injectButton" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.log("[Background] Could not inject button:", chrome.runtime.lastError.message);
+          } else {
+            console.log("[Background] Button injected successfully");
+          }
+        }
+      );
     }
   }
 });
@@ -33,7 +46,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "analyzeJob") {
-    console.log("[Background] Received analyzeJob from content script");
+    console.log("[Background] Received analyzeJob from content script", {
+      htmlLength: request.pageHTML?.length,
+      url: request.pageURL,
+    });
     // Store page data from content script
     pageData = {
       pageHTML: request.pageHTML,
@@ -41,14 +57,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     };
     sendResponse({ success: true });
 
-    // Open the popup
-    chrome.action.openPopup().catch((error) => {
-      console.warn("[Background] Could not open popup:", error.message);
-    });
+    // Open the popup - with a small delay to ensure it can fetch the data
+    setTimeout(() => {
+      chrome.action.openPopup().catch((error) => {
+        console.warn("[Background] Could not open popup:", error.message);
+      });
+    }, 100);
   } else if (request.action === "getPageData") {
     console.log(
       "[Background] Popup requesting page data:",
-      pageData ? "Available" : "None",
+      pageData ? `Available (${pageData.pageHTML.length} chars)` : "None",
     );
     // Popup requesting stored page data
     sendResponse({ pageData });
@@ -65,6 +83,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     sendResponse({ success: true });
   }
+
+  return true; // Keep channel open for async responses
 });
 
 // Initialize extension on install
