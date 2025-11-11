@@ -1,20 +1,28 @@
 import { JobDescription } from "@/types";
 
 export function extractJobDescriptionFromDOM(): JobDescription | null {
-  // LinkedIn job description
-  const linkedInTitle = document.querySelector("h2.show-more-less-html__title");
-  const linkedInCompany = document.querySelector('a[href*="company"]');
-  const linkedInDescription = document.querySelector(
-    ".show-more-less-html__markup",
-  );
+  // LinkedIn job description (support multiple layouts)
+  const linkedInTitle =
+    document.querySelector("h2.show-more-less-html__title") ||
+    document.querySelector("h1.top-card-layout__title") ||
+    document.querySelector("h1.t-24");
+  const linkedInCompany =
+    document.querySelector('a[href*="company"]') ||
+    document.querySelector("a.topcard__org-name-link") ||
+    document.querySelector("a.topcard__flavor");
+  const linkedInDescription =
+    document.querySelector(".show-more-less-html__markup") ||
+    document.querySelector(".jobs-description__content") ||
+    document.querySelector(".jobs-description-content__text");
 
   if (linkedInTitle && linkedInDescription) {
+    const descText = linkedInDescription.textContent || "";
     return {
       title: linkedInTitle.textContent || "Unknown",
       company: linkedInCompany?.textContent || "Unknown",
-      description: linkedInDescription.textContent || "",
-      requirements: extractRequirements(linkedInDescription.textContent || ""),
-      skills: extractSkills(linkedInDescription.textContent || ""),
+      description: descText,
+      requirements: extractRequirements(descText),
+      skills: extractSkills(descText),
       extractedAt: new Date(),
     };
   }
@@ -135,20 +143,28 @@ export function extractJobDescriptionFromDOM(): JobDescription | null {
     }
   }
 
-  // Glassdoor job description
-  const glassdoorTitle = document.querySelector('[data-test="jobTitle"]');
-  const glassdoorCompany = document.querySelector('[data-test="companyName"]');
-  const glassdoorDescription = document.querySelector(
-    '[data-test="JobDescription"]',
-  );
+  // Glassdoor job description (support multiple layouts)
+  const glassdoorTitle =
+    document.querySelector('[data-test="jobTitle"]') ||
+    document.querySelector('h1[data-test="jobTitle"]') ||
+    document.querySelector("h1");
+  const glassdoorCompany =
+    document.querySelector('[data-test="companyName"]') ||
+    document.querySelector('[data-test="employerName"]') ||
+    document.querySelector(".employerName");
+  const glassdoorDescription =
+    document.querySelector('[data-test="JobDescription"]') ||
+    document.querySelector('#JobDescriptionContainer') ||
+    document.querySelector('.jobDescriptionContent');
 
   if (glassdoorTitle && glassdoorDescription) {
+    const descText = glassdoorDescription.textContent || "";
     return {
       title: glassdoorTitle.textContent || "Unknown",
       company: glassdoorCompany?.textContent || "Unknown",
-      description: glassdoorDescription.textContent || "",
-      requirements: extractRequirements(glassdoorDescription.textContent || ""),
-      skills: extractSkills(glassdoorDescription.textContent || ""),
+      description: descText,
+      requirements: extractRequirements(descText),
+      skills: extractSkills(descText),
       extractedAt: new Date(),
     };
   }
