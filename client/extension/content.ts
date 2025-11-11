@@ -168,5 +168,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("[Content Script] Received inject button request");
     injectButton();
     sendResponse({ success: true });
+  } else if (request.action === "analyzeCurrentPage") {
+    console.log("[Content Script] Received analyzeCurrentPage request");
+    try {
+      const pageHTML = document.documentElement.outerHTML;
+      const pageURL = window.location.href;
+      chrome.runtime.sendMessage(
+        { action: "analyzeJob", pageHTML, pageURL },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Content Script] Error forwarding analyzeJob:",
+              chrome.runtime.lastError.message,
+            );
+            sendResponse({ success: false, error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse({ success: Boolean(response?.success) });
+          }
+        },
+      );
+    } catch (e) {
+      console.error("[Content Script] Failed to capture page:", e);
+      sendResponse({ success: false, error: e instanceof Error ? e.message : String(e) });
+    }
+    return true; // async response
   }
 });
