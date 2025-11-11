@@ -44,7 +44,7 @@ async function generatePDFBlobProper(
 
   // Build formatted HTML content
   const htmlContent = `
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px;">
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.45; color: #333; padding: 20px; max-width:800px; margin:0 auto;">
       <h1 style="margin: 0 0 5px 0; font-size: 28px; font-weight: 700;">${
         contact.name || "Resume"
       }</h1>
@@ -434,7 +434,7 @@ export async function downloadResumePDF(
       resume;
 
     const htmlContent = `
-      <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px;">
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.45; color: #333; padding: 20px; max-width:800px; margin:0 auto;">
         <h1 style="margin: 0 0 5px 0; font-size: 28px; font-weight: 700;">${
           contact.name || "Resume"
         }</h1>
