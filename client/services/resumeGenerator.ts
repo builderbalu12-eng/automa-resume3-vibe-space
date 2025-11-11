@@ -13,77 +13,143 @@ import {
 } from "docx";
 import { ResumeData } from "@/types";
 
-// Simple PDF generation by creating styled HTML and using browser's print-to-PDF
-async function generatePDFFromHTML(htmlContent: string): Promise<Blob> {
-  // Create a styled wrapper with print-friendly CSS
+// Generate PDF by creating styled HTML and using browser's print functionality
+async function generatePDFBlob(
+  resume: ResumeData,
+  company: string,
+  jobTitle: string,
+): Promise<Blob> {
+  const { contact, summary, skills, experience, education, projects } = resume;
+
+  // Build formatted HTML content for the resume
+  let htmlContent = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333; max-width: 8.5in;">
+      <h1 style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700;">${contact.name || "Resume"}</h1>
+      <div style="font-size: 12px; margin-bottom: 16px; color: #666;">
+        ${contact.email ? `<span>${contact.email}</span>` : ""}
+        ${contact.phone ? `<span> • ${contact.phone}</span>` : ""}
+        ${contact.location ? `<span> • ${contact.location}</span>` : ""}
+        ${contact.linkedin ? `<span> • ${contact.linkedin}</span>` : ""}
+      </div>
+  `;
+
+  if (summary?.trim()) {
+    htmlContent += `
+      <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 14px 0 8px 0; border-bottom: 2px solid #333; padding-bottom: 4px;">Professional Summary</h2>
+      <p style="font-size: 11px; margin-bottom: 12px;">${summary}</p>
+    `;
+  }
+
+  if (skills && skills.length > 0) {
+    htmlContent += `
+      <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 14px 0 8px 0; border-bottom: 2px solid #333; padding-bottom: 4px;">Skills</h2>
+      <p style="font-size: 11px; margin-bottom: 12px;">${skills.join(" • ")}</p>
+    `;
+  }
+
+  if (experience && experience.length > 0) {
+    htmlContent += `
+      <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 14px 0 8px 0; border-bottom: 2px solid #333; padding-bottom: 4px;">Professional Experience</h2>
+    `;
+    experience.forEach((exp) => {
+      const dateRange =
+        exp.endDate && !exp.isCurrentlyWorking
+          ? `${exp.startDate} – ${exp.endDate}`
+          : `${exp.startDate} – Present`;
+
+      htmlContent += `
+        <div style="margin-bottom: 10px;">
+          <div style="font-weight: 600; font-size: 12px;">${exp.title}</div>
+          <div style="font-size: 11px; color: #666;">${exp.company} | ${dateRange}</div>
+          <ul style="margin: 4px 0 0 20px; font-size: 11px; line-height: 1.4;">
+            ${exp.description.map((desc) => `<li style="margin-bottom: 2px;">${desc}</li>`).join("")}
+          </ul>
+        </div>
+      `;
+    });
+  }
+
+  if (education && education.length > 0) {
+    htmlContent += `
+      <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 14px 0 8px 0; border-bottom: 2px solid #333; padding-bottom: 4px;">Education</h2>
+    `;
+    education.forEach((edu) => {
+      htmlContent += `
+        <div style="font-size: 11px; margin-bottom: 8px;">
+          <div style="font-weight: 600;">${edu.degree} in ${edu.field}</div>
+          <div style="color: #666;">${edu.institution} | Graduated: ${edu.graduationDate}</div>
+        </div>
+      `;
+    });
+  }
+
+  if (projects && projects.length > 0) {
+    htmlContent += `
+      <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 14px 0 8px 0; border-bottom: 2px solid #333; padding-bottom: 4px;">Projects</h2>
+    `;
+    projects.forEach((project) => {
+      htmlContent += `
+        <div style="font-size: 11px; margin-bottom: 8px;">
+          <div style="font-weight: 600;">${project.title}</div>
+          <div>${project.description}</div>
+        </div>
+      `;
+    });
+  }
+
+  htmlContent += `
+    </div>
+  `;
+
+  // Create styled HTML document
   const styledHTML = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Resume</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Resume - ${contact.name}</title>
       <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        html, body {
+          width: 100%;
+          height: 100%;
+        }
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
+          font-family: 'Segoe UI', Arial, sans-serif;
           background: white;
+          padding: 0;
+          margin: 0;
         }
-        .resume {
-          max-width: 8.5in;
-          height: 11in;
-          margin: auto;
-          padding: 0.5in;
-          background: white;
-          box-shadow: 0 0 0 1px #ddd;
+        @page {
+          size: letter;
+          margin: 0.5in;
         }
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-        .contact { font-size: 12px; margin-bottom: 16px; color: #666; }
-        h2 {
-          font-size: 13px;
-          font-weight: 700;
-          text-transform: uppercase;
-          margin-top: 14px;
-          margin-bottom: 8px;
-          border-bottom: 2px solid #333;
-          padding-bottom: 4px;
-        }
-        .section { margin-bottom: 12px; }
-        .job { margin-bottom: 10px; }
-        .job-title { font-weight: 600; font-size: 12px; }
-        .company { font-size: 11px; color: #666; }
-        .duration { font-size: 11px; color: #999; }
-        .job-bullets { margin: 4px 0 0 20px; font-size: 11px; line-height: 1.4; }
-        .job-bullets li { margin-bottom: 2px; }
-        .skills { font-size: 11px; }
-        .skills span {
-          display: inline-block;
-          background: #f0f0f0;
-          padding: 2px 6px;
-          margin: 2px;
-          border-radius: 3px;
-        }
-        .education { font-size: 11px; margin-bottom: 8px; }
-        .degree { font-weight: 600; }
-        .institution { color: #666; }
         @media print {
-          body { margin: 0; padding: 0; }
-          .resume { max-width: 100%; height: auto; box-shadow: none; }
+          body {
+            margin: 0;
+            padding: 0;
+          }
         }
       </style>
     </head>
     <body>
-      <div class="resume">
-        ${htmlContent}
-      </div>
+      ${htmlContent}
+      <script>
+        window.addEventListener('load', function() {
+          window.print();
+        });
+      </script>
     </body>
     </html>
   `;
 
-  // Convert HTML string to Blob
-  const blob = new Blob([styledHTML], { type: "text/html" });
-  return blob;
+  // Return as Blob
+  return new Blob([styledHTML], { type: "text/html;charset=utf-8" });
 }
 
 export async function generateResumeDocx(
@@ -375,7 +441,7 @@ export async function generateResumePDF(resume: ResumeData): Promise<Blob> {
     });
   }
 
-  return await generatePDFFromHTML(htmlContent);
+  return await generatePDFBlob(resume, "", "");
 }
 
 export async function downloadResume(
@@ -387,8 +453,13 @@ export async function downloadResume(
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const today = new Date().toISOString().split("T")[0];
+  
+  // Sanitize filename to avoid special characters
+  const sanitizedCompany = (company || "Company").replace(/[/\\?%*:|"<>]/g, "");
+  const sanitizedTitle = (jobTitle || "Position").replace(/[/\\?%*:|"<>]/g, "");
+  
   a.href = url;
-  a.download = `Resume_${company}_${jobTitle}_${today}.docx`;
+  a.download = `Resume_${sanitizedCompany}_${sanitizedTitle}_${today}.docx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -400,14 +471,27 @@ export async function downloadResumePDF(
   company: string,
   jobTitle: string,
 ): Promise<void> {
-  const blob = await generateResumePDF(resume);
-  const url = URL.createObjectURL(blob);
+  const blob = await generatePDFBlob(resume, company, jobTitle);
+  
+  // Create a Blob with proper PDF mimetype
+  const pdfBlob = new Blob([blob], { type: "application/pdf" });
+  const url = URL.createObjectURL(pdfBlob);
+  
   const a = document.createElement("a");
   const today = new Date().toISOString().split("T")[0];
+  
+  // Sanitize filename to avoid special characters
+  const sanitizedCompany = (company || "Company").replace(/[/\\?%*:|"<>]/g, "");
+  const sanitizedTitle = (jobTitle || "Position").replace(/[/\\?%*:|"<>]/g, "");
+  
   a.href = url;
-  a.download = `Resume_${company}_${jobTitle}_${today}.pdf`;
+  a.download = `Resume_${sanitizedCompany}_${sanitizedTitle}_${today}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  
+  // Cleanup
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 100);
 }
