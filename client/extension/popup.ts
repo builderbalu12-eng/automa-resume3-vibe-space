@@ -1,5 +1,5 @@
 import { getMasterResume, setMasterResume } from "@/utils/storage";
-import { analyzeJobAndTailorResume } from "@/services/gemini";
+import { analyzeJobAndTailorResume, isJobPostingPage } from "@/services/gemini";
 import { downloadResume } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
 
@@ -9,6 +9,7 @@ interface PopupState {
   jobData: JobDescription | null;
   tailoredResume: ResumeData | null;
   atsScore: ATSScore | null;
+  isJobPosting?: boolean | null;
 }
 
 let state: PopupState = {
@@ -17,6 +18,7 @@ let state: PopupState = {
   jobData: null,
   tailoredResume: null,
   atsScore: null,
+  isJobPosting: null,
 };
 
 console.log("[Popup] Script loaded at", new Date().toISOString());
@@ -38,6 +40,9 @@ const downloadBtn = document.getElementById(
 const dashboardLink = document.getElementById(
   "dashboard-link",
 ) as HTMLAnchorElement | null;
+const customAnalyseBtn = document.getElementById(
+  "custom-analyse-btn",
+) as HTMLButtonElement | null;
 
 console.log("[Popup] DOM elements found:", {
   statusEl: !!statusEl,
@@ -250,20 +255,29 @@ function updateUI() {
       statusEl.classList.remove("hidden");
       const statusIcon = statusEl.querySelector(".status-icon");
       const statusText = statusEl.querySelector(".status-text");
-      if (statusIcon) statusIcon.textContent = "📄";
-      if (statusText) {
-        statusText.innerHTML =
-          "<strong>Job Posting Detected</strong><span>Click below to analyze and tailor your resume</span>";
+
+      if (state.isJobPosting === false) {
+        if (statusIcon) statusIcon.textContent = "ℹ️";
+        if (statusText) {
+          statusText.innerHTML =
+            "<strong>No Job Posting Found</strong><span>Use CustomAnalyse on a job page or open a specific job</span>";
+        }
+        if (buttonsEl) buttonsEl.classList.add("hidden");
+      } else {
+        if (statusIcon) statusIcon.textContent = "📄";
+        if (statusText) {
+          statusText.innerHTML =
+            "<strong>Job Posting Detected</strong><span>Click below to analyze and tailor your resume</span>";
+        }
+        if (buttonsEl) buttonsEl.classList.remove("hidden");
+
+        // Show tailor button
+        if (tailorBtn) {
+          tailorBtn.textContent = "⚡ Analyze & Tailor Resume";
+          tailorBtn.disabled = false;
+          tailorBtn.style.opacity = "1";
+        }
       }
-    }
-
-    if (buttonsEl) buttonsEl.classList.remove("hidden");
-
-    // Show tailor button
-    if (tailorBtn) {
-      tailorBtn.textContent = "⚡ Analyze & Tailor Resume";
-      tailorBtn.disabled = false;
-      tailorBtn.style.opacity = "1";
     }
     return;
   }
@@ -465,6 +479,56 @@ if (downloadBtn) {
       }
       console.error("[Popup] Download error:", error);
       if (downloadBtn) downloadBtn.disabled = false;
+    }
+  });
+}
+
+if (customAnalyseBtn) {
+  customAnalyseBtn.addEventListener("click", async () => {
+    try {
+      if (customAnalyseBtn) {
+        customAnalyseBtn.disabled = true;
+        customAnalyseBtn.textContent = "⏳ Analyzing current page...";
+      }
+
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (!tab?.id) throw new Error("No active tab found");
+
+      const results = (await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => ({ html: document.documentElement.outerHTML, url: location.href }),
+      })) as unknown as Array<{ result: { html: string; url: string } }>;
+
+      const payload = results && results[0] && results[0].result;
+      if (!payload?.html) throw new Error("Could not capture page content");
+
+      state.pageHTML = payload.html;
+      state.isJobPosting = null;
+
+      // Store in background (optional) so re-opened popup can fetch
+      chrome.runtime.sendMessage({ action: "analyzeJob", pageHTML: payload.html, pageURL: payload.url }, () => {});
+
+      // Try detecting if it's a job page (best-effort)
+      try {
+        state.isJobPosting = await isJobPostingPage(payload.html);
+      } catch (e) {
+        console.warn("[Popup] Job detection failed or not configured:", e);
+        state.isJobPosting = null; // fall back to default behavior
+      }
+
+      updateUI();
+    } catch (error) {
+      console.error("[Popup] CustomAnalyse error:", error);
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+        errorEl.textContent = `✗ Error: ${error instanceof Error ? error.message : "Unknown error"}`;
+      }
+    } finally {
+      if (customAnalyseBtn) {
+        customAnalyseBtn.disabled = false;
+        customAnalyseBtn.textContent = "CustomAnalyse for current page";
+      }
     }
   });
 }
