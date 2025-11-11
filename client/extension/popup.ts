@@ -145,18 +145,50 @@ async function loadMasterResume() {
 // Request page data from background service worker
 async function getPageDataFromBackground(): Promise<void> {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action: "getPageData" }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.warn(
-          "[Popup] Could not get page data from background:",
-          chrome.runtime.lastError.message,
-        );
-      } else if (response?.pageData) {
-        console.log("[Popup] Received page data from background");
-        state.pageHTML = response.pageData.pageHTML;
-      }
-      resolve();
-    });
+    // Try multiple times in case data hasn't arrived yet
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    const tryGetData = () => {
+      attempts++;
+      console.log(
+        `[Popup] Requesting page data from background (attempt ${attempts})`,
+      );
+
+      chrome.runtime.sendMessage(
+        { action: "getPageData" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn(
+              "[Popup] Message error:",
+              chrome.runtime.lastError.message,
+            );
+            if (attempts < maxAttempts) {
+              setTimeout(tryGetData, 200);
+            } else {
+              resolve();
+            }
+          } else if (response?.pageData?.pageHTML) {
+            console.log(
+              "[Popup] Received page data from background:",
+              response.pageData.pageHTML.length,
+              "chars",
+            );
+            state.pageHTML = response.pageData.pageHTML;
+            resolve();
+          } else {
+            console.log("[Popup] No page data available yet");
+            if (attempts < maxAttempts) {
+              setTimeout(tryGetData, 200);
+            } else {
+              resolve();
+            }
+          }
+        },
+      );
+    };
+
+    tryGetData();
   });
 }
 
