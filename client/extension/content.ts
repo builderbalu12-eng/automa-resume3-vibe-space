@@ -2,83 +2,8 @@ import {
   extractJobDescriptionFromDOM,
   createJobExtractionButton,
 } from "@/utils/jobExtractor";
-import { saveToStorage } from "@/utils/storage";
 
 let injectedButton = false;
-
-function getPageHTML(): string {
-  return document.documentElement.outerHTML;
-}
-
-function getPageText(): string {
-  // Get all visible text from the page
-  return document.body.innerText;
-}
-
-function getEnrichedPageContent(): string {
-  // Combine various content sources to create a richer analysis document
-  const parts: string[] = [];
-
-  // Get page title
-  const title = document.title;
-  if (title) parts.push(`Page Title: ${title}`);
-
-  // Get all visible text from page (this is what Gemini will analyze)
-  const pageText = document.body.innerText || "";
-
-  // Get specific job-related sections with Naukri-specific support
-  const jobSectionSelectors = [
-    // Naukri specific
-    ".job-desc",
-    ".jdMainSection",
-    ".jobsectionwrap",
-    "[data-cy='job-description']",
-    // Generic selectors
-    ".job-description",
-    "[class*='description']",
-    "[class*='job']",
-    "main",
-    "article",
-    "[role='main']",
-    ".job-post",
-    ".posting",
-    ".position",
-  ];
-
-  let jobContent = "";
-  // Try each selector and get the first one with substantial content
-  for (const selector of jobSectionSelectors) {
-    try {
-      const el = document.querySelector(selector);
-      const text = el?.textContent?.trim();
-      if (text && text.length > 100) {
-        jobContent = text;
-        break;
-      }
-    } catch (e) {
-      // Skip invalid selectors
-      continue;
-    }
-  }
-
-  // Combine content - prefer job content, fall back to full page text
-  if (jobContent && jobContent.length > 100) {
-    parts.push("=== JOB POSTING CONTENT ===");
-    parts.push(jobContent);
-  } else if (pageText && pageText.length > 100) {
-    parts.push("=== PAGE CONTENT ===");
-    // For Naukri and similar sites, include more of the page if we can't find specific job section
-    parts.push(pageText.substring(0, 15000)); // Increased limit for better content
-  }
-
-  // Add meta information
-  const url = window.location.href;
-  const hostname = window.location.hostname;
-  if (url) parts.push(`\nURL: ${url}`);
-  if (hostname) parts.push(`Site: ${hostname}`);
-
-  return parts.join("\n\n");
-}
 
 function injectButton() {
   if (injectedButton) return;
@@ -86,6 +11,8 @@ function injectButton() {
   const button = createJobExtractionButton();
   document.body.appendChild(button);
   injectedButton = true;
+
+  console.log("[Content Script] Button injected successfully");
 
   button.addEventListener("click", async () => {
     button.textContent = "⏳ Analyzing...";
@@ -100,8 +27,9 @@ function injectButton() {
         "[Content Script] Captured page HTML, length:",
         pageHTML.length,
       );
+      console.log("[Content Script] Sending to background...");
 
-      // Send HTML directly to popup via message (don't store anything)
+      // Send to background service worker (which will relay to popup)
       chrome.runtime.sendMessage(
         {
           action: "analyzeJob",
@@ -111,7 +39,7 @@ function injectButton() {
         (response) => {
           if (chrome.runtime.lastError) {
             console.error(
-              "[Content Script] Message send error:",
+              "[Content Script] Error sending message:",
               chrome.runtime.lastError.message,
             );
             alert(
@@ -120,7 +48,7 @@ function injectButton() {
             button.textContent = "Analyse";
             button.disabled = false;
           } else if (response?.success) {
-            console.log("[Content Script] Popup received HTML successfully");
+            console.log("[Content Script] Message sent successfully");
             // Show success feedback
             button.textContent = "✓ Analyzed! Opening...";
             button.style.background =
@@ -134,10 +62,7 @@ function injectButton() {
                 "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
             }, 2000);
           } else {
-            console.error(
-              "[Content Script] Popup did not process HTML:",
-              response,
-            );
+            console.error("[Content Script] No success response");
             alert("Failed to process page. Please try again.");
             button.textContent = "Analyse";
             button.disabled = false;
@@ -175,29 +100,51 @@ observer.observe(document.body, {
   attributes: false,
 });
 
-// Listen for messages from popup or background
+// Listen for messages from background
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getResume") {
-    // Send resume from localhost localStorage to popup
-    try {
-      const resumeKey = "resumematch_master_resume";
-      const resumeData = localStorage.getItem(resumeKey);
-      if (resumeData) {
-        const parsed = JSON.parse(resumeData);
-        console.log(
-          "[Content Script] Sending resume to popup:",
-          parsed.contact?.name,
-        );
-        sendResponse({ resume: parsed });
-      } else {
-        console.warn("[Content Script] No resume in localhost localStorage");
-        sendResponse({ resume: null });
-      }
-    } catch (e) {
-      console.error("[Content Script] Error getting resume:", e);
-      sendResponse({ resume: null, error: (e as Error).message });
-    }
+    // Send resume from chrome.storage.sync
+    chrome.storage.sync.get(
+      ["resumematch_master_resume"],
+      (result) => {
+        try {
+          const resumeData = result["resumematch_master_resume"];
+          if (resumeData) {
+            const parsed =
+              typeof resumeData === "string"
+                ? JSON.parse(resumeData)
+                : resumeData;
+            console.log(
+              "[Content Script] Sending resume from chrome.storage:",
+              parsed.contact?.name,
+            );
+            sendResponse({ resume: parsed });
+          } else {
+            // Try localStorage as fallback
+            const localResume = localStorage.getItem(
+              "resumematch_master_resume",
+            );
+            if (localResume) {
+              const parsed = JSON.parse(localResume);
+              console.log(
+                "[Content Script] Sending resume from localStorage:",
+                parsed.contact?.name,
+              );
+              sendResponse({ resume: parsed });
+            } else {
+              console.warn("[Content Script] No resume found");
+              sendResponse({ resume: null });
+            }
+          }
+        } catch (e) {
+          console.error("[Content Script] Error getting resume:", e);
+          sendResponse({ resume: null, error: (e as Error).message });
+        }
+      },
+    );
+    return true; // Will respond asynchronously
   } else if (request.action === "injectButton") {
+    console.log("[Content Script] Received inject button request");
     injectButton();
     sendResponse({ success: true });
   }
