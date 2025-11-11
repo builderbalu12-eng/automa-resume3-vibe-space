@@ -54,7 +54,7 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
       .replace(/\s+/g, " "); // Normalize whitespace
   }
 
-  cleanContent = cleanContent.substring(0, 12000); // Limit to first 12k chars for API limits
+  cleanContent = (cleanContent || "").substring(0, 12000); // Limit to first 12k chars for API limits
 
   // First, do simple keyword-based detection for fast filtering
   const lowerContent = cleanContent.toLowerCase();
@@ -130,7 +130,7 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    console.log("[isJobPostingPage] Gemini response:", text.substring(0, 200));
+    console.log("[isJobPostingPage] Gemini response:", text ? text.substring(0, 200) : text);
 
     if (!text) {
       console.error("[isJobPostingPage] Empty response from Gemini");
@@ -213,7 +213,7 @@ export async function parseJobFromHTML(
       .replace(/\s+/g, " "); // Normalize whitespace
   }
 
-  cleanContent = cleanContent.substring(0, 16000); // Limit to first 16k chars for API limits
+  cleanContent = (cleanContent || "").substring(0, 16000); // Limit to first 16k chars for API limits
 
   const prompt = `Extract job posting information from this page content.
 
@@ -256,7 +256,7 @@ ${cleanContent}`;
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    console.log("[parseJobFromHTML] Gemini response:", text.substring(0, 300));
+    console.log("[parseJobFromHTML] Gemini response:", text ? text.substring(0, 300) : text);
 
     if (!text) {
       console.error("[parseJobFromHTML] Empty response from Gemini");
@@ -281,15 +281,15 @@ ${cleanContent}`;
             innerE,
           );
           console.error(
-            "[parseJobFromHTML] Response was:",
-            text.substring(0, 500),
+          "[parseJobFromHTML] Response was:",
+            text ? text.substring(0, 500) : text,
           );
           return null;
         }
       } else {
         console.error(
           "[parseJobFromHTML] No JSON found in response:",
-          text.substring(0, 500),
+          text ? text.substring(0, 500) : text,
         );
         return null;
       }
@@ -419,11 +419,11 @@ export async function tailorResumeForJob(
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const jobSkills =
-    jobDescription.skills.join(", ") ||
-    jobDescription.description.substring(0, 500);
+    (Array.isArray(jobDescription.skills) ? jobDescription.skills.join(", ") : "") ||
+    (jobDescription.description ? jobDescription.description.substring(0, 500) : "");
   const jobRequirements =
-    jobDescription.requirements.join(", ") ||
-    jobDescription.description.substring(0, 300);
+    (Array.isArray(jobDescription.requirements) ? jobDescription.requirements.join(", ") : "") ||
+    (jobDescription.description ? jobDescription.description.substring(0, 300) : "");
 
   const prompt = `You are an expert resume optimizer. Tailor this resume to match this specific job posting.
 
@@ -533,7 +533,7 @@ export async function calculateATSScore(
     `Job: ${jobDescription.title} at ${jobDescription.company}`,
     `Skills needed: ${jobDescription.skills.join(", ")}`,
     `Requirements: ${jobDescription.requirements.join(", ")}`,
-    `Description: ${jobDescription.description.substring(0, 500)}`,
+    `Description: ${jobDescription.description ? jobDescription.description.substring(0, 500) : ""}`,
   ].join("\n");
 
   const prompt = `Analyze how well this resume matches the job posting for ATS (Applicant Tracking System) screening.
@@ -628,7 +628,7 @@ export async function analyzeJobAndTailorResume(
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   // Clean HTML
-  let cleanHTML = pageHTML
+  let cleanHTML = (pageHTML || "")
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
     .replace(/<!--[\s\S]*?-->/g, "")
