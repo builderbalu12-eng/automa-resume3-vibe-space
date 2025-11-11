@@ -146,13 +146,15 @@ export const Dashboard: React.FC = () => {
                       <div className="mt-4">
                         <h4 className="text-sm font-semibold mb-2">Skills</h4>
                         <div className="flex flex-wrap gap-2">
-                          {(masterResume?.skills ?? [
-                            "JavaScript",
-                            "React",
-                            "Node.js",
-                            "TypeScript",
-                            "AWS",
-                          ])
+                          {(
+                            masterResume?.skills ?? [
+                              "JavaScript",
+                              "React",
+                              "Node.js",
+                              "TypeScript",
+                              "AWS",
+                            ]
+                          )
                             .slice(0, 8)
                             .map((s) => (
                               <span
@@ -166,27 +168,30 @@ export const Dashboard: React.FC = () => {
                       </div>
 
                       <div className="mt-4">
-                        <h4 className="text-sm font-semibold mb-2">Recent Role</h4>
-                        {(
-                          masterResume?.experience && masterResume.experience.length
-                            ? masterResume.experience.slice(0, 1)
-                            : [
-                                {
-                                  title: "Senior Software Engineer",
-                                  company: "Acme Corp",
-                                  startDate: "Jan 2020",
-                                  endDate: "Present",
-                                  description: [
-                                    "Led a team to build a customer-facing web app.",
-                                    "Improved load times by 40% through optimizations.",
-                                  ],
-                                },
-                              ]
+                        <h4 className="text-sm font-semibold mb-2">
+                          Recent Role
+                        </h4>
+                        {(masterResume?.experience &&
+                        masterResume.experience.length
+                          ? masterResume.experience.slice(0, 1)
+                          : [
+                              {
+                                title: "Senior Software Engineer",
+                                company: "Acme Corp",
+                                startDate: "Jan 2020",
+                                endDate: "Present",
+                                description: [
+                                  "Led a team to build a customer-facing web app.",
+                                  "Improved load times by 40% through optimizations.",
+                                ],
+                              },
+                            ]
                         ).map((exp) => (
                           <div key={exp.title} className="text-sm">
                             <div className="font-semibold">{exp.title}</div>
                             <div className="text-muted-foreground text-xs">
-                              {exp.company} • {exp.startDate} {exp.endDate ? `– ${exp.endDate}` : "– Present"}
+                              {exp.company} • {exp.startDate}{" "}
+                              {exp.endDate ? `– ${exp.endDate}` : "– Present"}
                             </div>
                             <ul className="list-disc list-inside mt-2 text-muted-foreground text-xs">
                               {exp.description.slice(0, 3).map((d, i) => (
