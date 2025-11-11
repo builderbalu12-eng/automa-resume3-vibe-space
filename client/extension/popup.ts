@@ -1,6 +1,6 @@
 import { getMasterResume, setMasterResume } from "@/utils/storage";
 import { analyzeJobAndTailorResume } from "@/services/gemini";
-import { downloadResumePDF } from "@/services/resumeGenerator";
+import { downloadResume } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
 
 interface PopupState {
@@ -381,10 +381,10 @@ if (downloadBtn) {
     if (successEl) successEl.classList.add("hidden");
 
     try {
-      console.log("[Popup] Downloading tailored resume as PDF...");
+      console.log("[Popup] Downloading tailored resume as DOCX...");
 
-      // Download as PDF
-      await downloadResumePDF(
+      // Download as DOCX
+      await downloadResume(
         state.tailoredResume,
         state.jobData.company,
         state.jobData.title,
@@ -392,7 +392,7 @@ if (downloadBtn) {
 
       if (successEl) {
         successEl.classList.remove("hidden");
-        successEl.textContent = "✓ Resume downloaded as PDF!";
+        successEl.textContent = "✓ Resume downloaded as DOCX!";
       }
       if (downloadBtn) downloadBtn.disabled = false;
     } catch (error) {
