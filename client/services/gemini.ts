@@ -130,7 +130,10 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    console.log("[isJobPostingPage] Gemini response:", text ? text.substring(0, 200) : text);
+    console.log(
+      "[isJobPostingPage] Gemini response:",
+      text ? text.substring(0, 200) : text,
+    );
 
     if (!text) {
       console.error("[isJobPostingPage] Empty response from Gemini");
@@ -256,7 +259,10 @@ ${cleanContent}`;
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    console.log("[parseJobFromHTML] Gemini response:", text ? text.substring(0, 300) : text);
+    console.log(
+      "[parseJobFromHTML] Gemini response:",
+      text ? text.substring(0, 300) : text,
+    );
 
     if (!text) {
       console.error("[parseJobFromHTML] Empty response from Gemini");
@@ -281,7 +287,7 @@ ${cleanContent}`;
             innerE,
           );
           console.error(
-          "[parseJobFromHTML] Response was:",
+            "[parseJobFromHTML] Response was:",
             text ? text.substring(0, 500) : text,
           );
           return null;
@@ -419,11 +425,19 @@ export async function tailorResumeForJob(
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const jobSkills =
-    (Array.isArray(jobDescription.skills) ? jobDescription.skills.join(", ") : "") ||
-    (jobDescription.description ? jobDescription.description.substring(0, 500) : "");
+    (Array.isArray(jobDescription.skills)
+      ? jobDescription.skills.join(", ")
+      : "") ||
+    (jobDescription.description
+      ? jobDescription.description.substring(0, 500)
+      : "");
   const jobRequirements =
-    (Array.isArray(jobDescription.requirements) ? jobDescription.requirements.join(", ") : "") ||
-    (jobDescription.description ? jobDescription.description.substring(0, 300) : "");
+    (Array.isArray(jobDescription.requirements)
+      ? jobDescription.requirements.join(", ")
+      : "") ||
+    (jobDescription.description
+      ? jobDescription.description.substring(0, 300)
+      : "");
 
   const prompt = `You are an expert resume optimizer. Tailor this resume to match this specific job posting.
 
