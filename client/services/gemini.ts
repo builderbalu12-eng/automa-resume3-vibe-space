@@ -77,7 +77,10 @@ export async function withRetry(
   }
 }
 
-export async function generateContentWithRetry(prompt: string, modelName = "gemini-2.5-flash") {
+export async function generateContentWithRetry(
+  prompt: string,
+  modelName = "gemini-2.5-flash",
+) {
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: modelName });
   const result = await withRetry(() => model.generateContent(prompt));

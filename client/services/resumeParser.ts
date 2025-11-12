@@ -14,7 +14,10 @@ export async function parseDocxFile(file: File): Promise<ResumeData> {
   try {
     resume = await enhanceWithGemini(resume, text);
   } catch (error) {
-    console.warn("Gemini enhancement failed or unavailable, using basic parsing:", error);
+    console.warn(
+      "Gemini enhancement failed or unavailable, using basic parsing:",
+      error,
+    );
     // Continue with basic parsing if Gemini fails
   }
 
