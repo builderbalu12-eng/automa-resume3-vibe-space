@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, Eye, EyeOff } from "lucide-react";
-import { getSettings, setSettings, AppSettings } from "@/utils/storage";
+import { X, Save, Eye, EyeOff, Plus } from "lucide-react";
+import {
+  getSettings,
+  setSettings,
+  AppSettings,
+} from "@/utils/storage";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -11,19 +15,14 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   const [settings, setSettingsState] = useState<AppSettings>({
     geminiApiKey: "",
     customInstructions: "",
-    resumeContentPreferences: {
-      includeCertifications: true,
-      includeAchievements: true,
-      includePublications: true,
-      includeHobbies: true,
-      includeProjects: true,
-    },
+    resumeContentSections: [],
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -62,21 +61,35 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         onClose();
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save settings");
+      setError(
+        err instanceof Error ? err.message : "Failed to save settings"
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handlePreferenceChange = (
-    key: keyof AppSettings["resumeContentPreferences"],
-  ) => {
+  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && tagInput.trim()) {
+      e.preventDefault();
+      const newTag = tagInput.trim();
+      
+      if (!settings.resumeContentSections.includes(newTag)) {
+        setSettingsState({
+          ...settings,
+          resumeContentSections: [...settings.resumeContentSections, newTag],
+        });
+      }
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
     setSettingsState({
       ...settings,
-      resumeContentPreferences: {
-        ...settings.resumeContentPreferences,
-        [key]: !settings.resumeContentPreferences[key],
-      },
+      resumeContentSections: settings.resumeContentSections.filter(
+        (tag) => tag !== tagToRemove
+      ),
     });
   };
 
@@ -85,7 +98,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
       <div className="bg-background rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto border border-border">
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-background">
           <h2 className="text-2xl font-bold">Settings</h2>
           <button
             onClick={onClose}
@@ -161,64 +174,55 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
             />
           </div>
 
-          {/* Resume Content Preferences */}
+          {/* Resume Content Sections - Tag based */}
           <div>
             <label className="block text-sm font-semibold mb-3">
-              What to Include in Tailored Resumes
+              Resume Sections to Include
             </label>
-            <div className="space-y-3">
-              {[
-                {
-                  key: "includeCertifications",
-                  label: "Certifications",
-                  description: "Include relevant certifications",
-                },
-                {
-                  key: "includeAchievements",
-                  label: "Achievements",
-                  description: "Include awards and achievements",
-                },
-                {
-                  key: "includePublications",
-                  label: "Publications",
-                  description: "Include research/article publications",
-                },
-                {
-                  key: "includeProjects",
-                  label: "Projects",
-                  description: "Include side projects and portfolios",
-                },
-                {
-                  key: "includeHobbies",
-                  label: "Hobbies & Interests",
-                  description: "Include personal interests",
-                },
-              ].map((pref) => (
-                <div key={pref.key} className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id={pref.key}
-                    checked={
-                      settings.resumeContentPreferences[
-                        pref.key as keyof AppSettings["resumeContentPreferences"]
-                      ]
-                    }
-                    onChange={() =>
-                      handlePreferenceChange(
-                        pref.key as keyof AppSettings["resumeContentPreferences"],
-                      )
-                    }
-                    className="mt-1 w-4 h-4 rounded border-border accent-primary"
-                  />
-                  <label htmlFor={pref.key} className="flex-1 cursor-pointer">
-                    <div className="text-sm font-medium">{pref.label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {pref.description}
-                    </div>
-                  </label>
-                </div>
-              ))}
+            <p className="text-xs text-muted-foreground mb-3">
+              Type a section name and press Enter to add (e.g., "Certifications", "Projects", "Awards")
+            </p>
+            
+            {/* Tag Input */}
+            <div className="relative mb-4">
+              <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-background focus-within:ring-2 focus-within:ring-primary">
+                <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  placeholder="Add section..."
+                  className="flex-1 bg-transparent text-foreground text-sm focus:outline-none"
+                />
+              </div>
             </div>
+
+            {/* Display Tags */}
+            {settings.resumeContentSections.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {settings.resumeContentSections.map((tag) => (
+                    <div
+                      key={tag}
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium border border-primary/20"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        className="text-primary/70 hover:text-primary transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                No sections added. Add sections to include them in tailored resumes.
+              </p>
+            )}
           </div>
 
           {/* Error and Success Messages */}
@@ -230,9 +234,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {saveSuccess && (
             <div className="p-3 rounded-lg bg-green-600/10 border border-green-600/20">
-              <p className="text-sm text-green-600">
-                ✓ Settings saved successfully!
-              </p>
+              <p className="text-sm text-green-600">✓ Settings saved successfully!</p>
             </div>
           )}
 
