@@ -12,6 +12,7 @@ import {
   WidthType,
 } from "docx";
 import { ResumeData } from "@/types";
+import { getSettings, DEFAULT_IMMUTABLE_SECTIONS } from "@/utils/storage";
 
 // Load html2pdf from CDN and generate actual PDF
 async function loadHtml2Pdf(): Promise<any> {
