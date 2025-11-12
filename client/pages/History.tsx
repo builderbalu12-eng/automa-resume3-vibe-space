@@ -122,28 +122,16 @@ export const History: React.FC = () => {
         <div className="bg-card border border-border rounded-xl p-6 mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div className="flex flex-wrap gap-2">
-              {(
-                ["all", "applied", "interview", "offer", "rejected"] as const
-              ).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => handleFilterChange(status)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    statusFilter === status
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted hover:bg-muted/80"
-                  }`}
-                >
-                  {status === "all"
-                    ? "All"
-                    : status.charAt(0).toUpperCase() + status.slice(1)}{" "}
-                  (
-                  {status === "all"
-                    ? applications.length
-                    : applications.filter((a) => a.status === status).length}
-                  )
-                </button>
-              ))}
+              <button
+                onClick={() => handleFilterChange("all")}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  statusFilter === "all"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+              >
+                All ({applications.length})
+              </button>
             </div>
 
             <button
