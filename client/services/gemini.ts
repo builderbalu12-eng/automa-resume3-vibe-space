@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
-import { getApiKeyFromSettings } from "@/utils/storage";
+import { getApiKeyFromSettings, getSettings, DEFAULT_IMMUTABLE_SECTIONS } from "@/utils/storage";
 
 let GEMINI_API_KEY = "";
 
@@ -448,7 +448,16 @@ export async function tailorResumeForJob(
       ? jobDescription.description.substring(0, 300)
       : "");
 
+  const settings = (await getSettings()) || { customInstructions: "", resumeContentSections: [] };
+  const sectionsToInclude = Array.from(new Set([...(settings.resumeContentSections || []), ...DEFAULT_IMMUTABLE_SECTIONS]));
+  const sectionsText = sectionsToInclude.join(", ");
+  const customInstrText = settings.customInstructions?.trim() ? `Custom Instructions: ${settings.customInstructions}` : "";
+
   const prompt = `You are an expert resume optimizer. Tailor this resume to match this specific job posting.
+
+  USER PREFERENCES:
+  - Only include/tailor these sections: ${sectionsText}
+  ${customInstrText}
 
   TARGET JOB:
   - Title: ${jobDescription.title}
@@ -682,7 +691,16 @@ export async function analyzeJobAndTailorResume(
     2,
   );
 
+  const settings = (await getSettings()) || { customInstructions: "", resumeContentSections: [] };
+  const sectionsToInclude = Array.from(new Set([...(settings.resumeContentSections || []), ...DEFAULT_IMMUTABLE_SECTIONS]));
+  const sectionsText = sectionsToInclude.join(", ");
+  const customInstrText = settings.customInstructions?.trim() ? `Custom Instructions: ${settings.customInstructions}` : "";
+
   const prompt = `You are an expert resume optimizer and job analyst.
+
+USER PREFERENCES:
+- Only include/tailor these sections: ${sectionsText}
+${customInstrText}
 
 TASK:
 1. Extract job posting details from the page content
