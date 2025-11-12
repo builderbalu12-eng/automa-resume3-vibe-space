@@ -206,3 +206,35 @@ export async function clearAllStorage(): Promise<void> {
     keys.forEach((key) => localStorage.removeItem(key as string));
   }
 }
+
+export async function getSettings(): Promise<AppSettings | null> {
+  try {
+    const stored = await getFromStorage(STORAGE_KEYS.APP_SETTINGS);
+    if (stored) {
+      return stored as AppSettings;
+    }
+    return null;
+  } catch (err) {
+    console.error("Error getting settings:", err);
+    return null;
+  }
+}
+
+export async function setSettings(settings: AppSettings): Promise<void> {
+  try {
+    await saveToStorage(STORAGE_KEYS.APP_SETTINGS, settings);
+  } catch (err) {
+    console.error("Error saving settings:", err);
+    throw err;
+  }
+}
+
+export async function getApiKeyFromSettings(): Promise<string | null> {
+  try {
+    const settings = await getSettings();
+    return settings?.geminiApiKey || null;
+  } catch (err) {
+    console.error("Error getting API key from settings:", err);
+    return null;
+  }
+}
