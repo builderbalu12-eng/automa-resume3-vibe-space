@@ -270,6 +270,17 @@ export const UploadResume: React.FC = () => {
         </div>
 
         <div className="bg-card border border-border rounded-xl p-8 mb-8">
+          {isLoading && (
+            <div className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
+                <div>
+                  <p className="text-sm font-medium text-primary">Processing your resume...</p>
+                  <p className="text-xs text-primary/80">Parsing and analyzing content</p>
+                </div>
+              </div>
+            </div>
+          )}
           <ResumeUpload
             onUploadSuccess={handleUploadSuccess}
             isLoading={isLoading}
