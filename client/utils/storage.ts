@@ -6,6 +6,31 @@ export interface AppSettings {
   resumeContentSections: string[];
 }
 
+export const DEFAULT_IMMUTABLE_SECTIONS = ["Experience", "Education", "Skills"];
+
+export const SUGGESTED_SECTIONS = [
+  "Professional Summary",
+  "Leadership Experience",
+  "Key Accomplishments",
+  "Certifications",
+  "Technical Stack",
+  "Open Source Contributions",
+  "Presentations and Speaking Engagements",
+  "Patents and Innovations",
+  "Soft Skills Summary",
+  "Career Highlights",
+  "Core Competencies",
+  "Testimonials or Recommendations",
+  "Freelance or Consulting Projects",
+  "Teaching Experience",
+  "Research Interests",
+  "Performance Metrics and KPIs",
+  "Exhibitions",
+  "Sales Achievements",
+  "Policy Work",
+  "Course Projects",
+];
+
 const STORAGE_KEYS = {
   USER_ID: "resumematch_user_id",
   MASTER_RESUME: "resumematch_master_resume",
