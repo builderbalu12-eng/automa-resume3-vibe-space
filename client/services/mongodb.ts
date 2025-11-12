@@ -70,7 +70,9 @@ export async function saveApplication(
 export async function getApplicationHistory(): Promise<ApplicationRecord[]> {
   try {
     const history = await getFromStorage(STORAGE_KEYS.APPLICATIONS);
-    return history || [];
+    if (Array.isArray(history)) return history;
+    if (history && typeof history === "object") return [history];
+    return [];
   } catch (error) {
     console.error("Error fetching application history:", error);
     return [];

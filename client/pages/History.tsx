@@ -152,7 +152,7 @@ export const History: React.FC = () => {
         </div>
 
         {applications.length > 0 && (
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-card border border-border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-primary mb-1">
                 {applications.length}
@@ -160,18 +160,6 @@ export const History: React.FC = () => {
               <p className="text-sm text-muted-foreground">
                 Total Applications
               </p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-600 mb-1">
-                {applications.filter((a) => a.status === "offer").length}
-              </div>
-              <p className="text-sm text-muted-foreground">Offers</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600 mb-1">
-                {applications.filter((a) => a.status === "interview").length}
-              </div>
-              <p className="text-sm text-muted-foreground">Interviews</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-primary mb-1">

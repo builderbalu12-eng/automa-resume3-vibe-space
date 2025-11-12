@@ -141,7 +141,7 @@ export const ApplicationList: React.FC<ApplicationListProps> = ({
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {(
-                      ["applied", "interview", "offer", "rejected"] as const
+                      ["applied"] as const
                     ).map((status) => (
                       <button
                         key={status}
