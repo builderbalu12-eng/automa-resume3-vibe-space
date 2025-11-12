@@ -366,7 +366,7 @@ ${cleanContent}`;
 }
 
 export async function analyzeMasterResume(resume: ResumeData): Promise<string> {
-  const genAI = initGemini();
+  const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Analyze this resume and provide a concise summary of key strengths and areas:
