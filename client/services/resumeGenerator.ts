@@ -264,7 +264,7 @@ export async function generateResumeDocx(
     );
   }
 
-  if (skills.length > 0) {
+  if (includeSkills && skills.length > 0) {
     sections.push(
       new Paragraph({
         text: "SKILLS",
