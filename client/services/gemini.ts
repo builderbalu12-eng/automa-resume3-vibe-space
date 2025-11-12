@@ -860,22 +860,45 @@ Return ONLY valid JSON (no markdown, no explanations):
     };
 
     // Map any additionalSections returned by the model into ResumeData
-    const additional = parsed.additionalSections || parsed.additionalsections || parsed.additional || {};
-    const omittedFromModel = Array.isArray(parsed.omittedSections) ? parsed.omittedSections : (Array.isArray(parsed.omittedsections) ? parsed.omittedsections : []);
+    const additional =
+      parsed.additionalSections ||
+      parsed.additionalsections ||
+      parsed.additional ||
+      {};
+    const omittedFromModel = Array.isArray(parsed.omittedSections)
+      ? parsed.omittedSections
+      : Array.isArray(parsed.omittedsections)
+        ? parsed.omittedsections
+        : [];
 
     if (additional && typeof additional === "object") {
       Object.keys(additional).forEach((key) => {
         const normalized = key.toLowerCase().trim();
-        const items = Array.isArray(additional[key]) ? additional[key].filter((i: any) => i && String(i).trim()).map((i: any) => String(i)) : [];
+        const items = Array.isArray(additional[key])
+          ? additional[key]
+              .filter((i: any) => i && String(i).trim())
+              .map((i: any) => String(i))
+          : [];
         if (!items.length) return;
 
         if (normalized.includes("certif")) {
           tailoredResume.certifications = items;
-        } else if (normalized.includes("achiev") || normalized.includes("career") || normalized.includes("accompl")) {
+        } else if (
+          normalized.includes("achiev") ||
+          normalized.includes("career") ||
+          normalized.includes("accompl")
+        ) {
           tailoredResume.achievements = items;
-        } else if (normalized.includes("project") || normalized.includes("course")) {
+        } else if (
+          normalized.includes("project") ||
+          normalized.includes("course")
+        ) {
           // Map string items to Project objects with description
-          tailoredResume.projects = items.map((it: string) => ({ title: "", description: it, technologies: [] }));
+          tailoredResume.projects = items.map((it: string) => ({
+            title: "",
+            description: it,
+            technologies: [],
+          }));
         } else if (normalized.includes("publication")) {
           tailoredResume.publications = items;
         } else if (normalized.includes("hobb")) {
@@ -883,13 +906,19 @@ Return ONLY valid JSON (no markdown, no explanations):
         } else if (normalized.includes("skill")) {
           // merge into skills if not present
           items.forEach((it: string) => {
-            if (!tailoredResume.skills.some((s) => s.toLowerCase() === it.toLowerCase())) {
+            if (
+              !tailoredResume.skills.some(
+                (s) => s.toLowerCase() === it.toLowerCase(),
+              )
+            ) {
               tailoredResume.skills.push(it);
             }
           });
         } else {
           // Unknown section: push into achievements as fallback
-          tailoredResume.achievements = Array.from(new Set([...(tailoredResume.achievements || []), ...items]));
+          tailoredResume.achievements = Array.from(
+            new Set([...(tailoredResume.achievements || []), ...items]),
+          );
         }
       });
     }
@@ -923,15 +952,62 @@ Return ONLY valid JSON (no markdown, no explanations):
     const includedSectionsSet = new Set<string>();
     const checkIfPresent = (name: string) => {
       const n = name.toLowerCase();
-      if (n.includes("summary") && tailoredResume.summary && tailoredResume.summary.trim()) return true;
-      if (n.includes("skill") && tailoredResume.skills && tailoredResume.skills.length > 0) return true;
-      if (n.includes("experience") && tailoredResume.experience && tailoredResume.experience.length > 0) return true;
-      if (n.includes("education") && tailoredResume.education && tailoredResume.education.length > 0) return true;
-      if (n.includes("project") && tailoredResume.projects && tailoredResume.projects.length > 0) return true;
-      if (n.includes("certif") && tailoredResume.certifications && tailoredResume.certifications.length > 0) return true;
-      if ((n.includes("achiev") || n.includes("career") || n.includes("accompl")) && tailoredResume.achievements && tailoredResume.achievements.length > 0) return true;
-      if (n.includes("publication") && tailoredResume.publications && tailoredResume.publications.length > 0) return true;
-      if (n.includes("hobb") && tailoredResume.hobbies && tailoredResume.hobbies.length > 0) return true;
+      if (
+        n.includes("summary") &&
+        tailoredResume.summary &&
+        tailoredResume.summary.trim()
+      )
+        return true;
+      if (
+        n.includes("skill") &&
+        tailoredResume.skills &&
+        tailoredResume.skills.length > 0
+      )
+        return true;
+      if (
+        n.includes("experience") &&
+        tailoredResume.experience &&
+        tailoredResume.experience.length > 0
+      )
+        return true;
+      if (
+        n.includes("education") &&
+        tailoredResume.education &&
+        tailoredResume.education.length > 0
+      )
+        return true;
+      if (
+        n.includes("project") &&
+        tailoredResume.projects &&
+        tailoredResume.projects.length > 0
+      )
+        return true;
+      if (
+        n.includes("certif") &&
+        tailoredResume.certifications &&
+        tailoredResume.certifications.length > 0
+      )
+        return true;
+      if (
+        (n.includes("achiev") ||
+          n.includes("career") ||
+          n.includes("accompl")) &&
+        tailoredResume.achievements &&
+        tailoredResume.achievements.length > 0
+      )
+        return true;
+      if (
+        n.includes("publication") &&
+        tailoredResume.publications &&
+        tailoredResume.publications.length > 0
+      )
+        return true;
+      if (
+        n.includes("hobb") &&
+        tailoredResume.hobbies &&
+        tailoredResume.hobbies.length > 0
+      )
+        return true;
       return false;
     };
 
