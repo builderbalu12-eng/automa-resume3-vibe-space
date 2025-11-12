@@ -73,7 +73,7 @@ async function generatePDFBlobProper(
       </div>
 
       ${
-        summary?.trim()
+        includeSummary && summary?.trim()
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Summary</h2>
         <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${summary}</p>
@@ -463,13 +463,13 @@ export async function downloadResumePDF(
         </div>
 
         ${
-          summary?.trim()
-            ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Summary</h2>
-          <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${summary}</p>
-        `
-            : ""
-        }
+        includeSummary && summary?.trim()
+          ? `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Summary</h2>
+        <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${summary}</p>
+      `
+          : ""
+      }
 
         ${
           skills && skills.length > 0
