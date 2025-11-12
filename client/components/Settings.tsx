@@ -60,7 +60,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
 
       await setSettings(settings);
       setSaveSuccess(true);
-      
+
       // Show processing message if user added custom sections
       if (settings.resumeContentSections.length > 0) {
         setShowProcessingMessage(true);
@@ -72,9 +72,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         onClose();
       }, 2500);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save settings"
-      );
+      setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
       setIsSaving(false);
     }
@@ -84,9 +82,11 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     if (e.key === "Enter" && tagInput.trim()) {
       e.preventDefault();
       const newTag = tagInput.trim();
-      
-      if (!settings.resumeContentSections.includes(newTag) && 
-          !DEFAULT_IMMUTABLE_SECTIONS.includes(newTag)) {
+
+      if (
+        !settings.resumeContentSections.includes(newTag) &&
+        !DEFAULT_IMMUTABLE_SECTIONS.includes(newTag)
+      ) {
         setSettingsState({
           ...settings,
           resumeContentSections: [...settings.resumeContentSections, newTag],
@@ -109,7 +109,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     setSettingsState({
       ...settings,
       resumeContentSections: settings.resumeContentSections.filter(
-        (tag) => tag !== tagToRemove
+        (tag) => tag !== tagToRemove,
       ),
     });
   };
@@ -118,7 +118,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   const availableSuggestions = SUGGESTED_SECTIONS.filter(
     (section) =>
       !settings.resumeContentSections.includes(section) &&
-      !DEFAULT_IMMUTABLE_SECTIONS.includes(section)
+      !DEFAULT_IMMUTABLE_SECTIONS.includes(section),
   );
 
   if (!isOpen) return null;
@@ -208,7 +208,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
               <label className="block text-sm font-semibold mb-3">
                 Resume Sections to Include
               </label>
-              
+
               {/* Default Immutable Sections */}
               <div className="mb-6">
                 <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -298,7 +298,8 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
           {settings.resumeContentSections.length > 0 && (
             <div className="p-4 rounded-lg bg-blue-600/10 border border-blue-600/20">
               <p className="text-xs text-blue-600 font-medium">
-                💡 We will process the resume if your uploaded resume has potential content related to the added sections.
+                💡 We will process the resume if your uploaded resume has
+                potential content related to the added sections.
               </p>
             </div>
           )}
@@ -312,14 +313,17 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {saveSuccess && (
             <div className="p-3 rounded-lg bg-green-600/10 border border-green-600/20">
-              <p className="text-sm text-green-600">✓ Settings saved successfully!</p>
+              <p className="text-sm text-green-600">
+                ✓ Settings saved successfully!
+              </p>
             </div>
           )}
 
           {showProcessingMessage && (
             <div className="p-3 rounded-lg bg-amber-600/10 border border-amber-600/20">
               <p className="text-sm text-amber-600">
-                ⚠️ We will process the resume if your uploaded resume has potential content related to the added sections.
+                ⚠️ We will process the resume if your uploaded resume has
+                potential content related to the added sections.
               </p>
             </div>
           )}
