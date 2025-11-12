@@ -526,7 +526,23 @@ export async function downloadResumePDF(
   try {
     const html2pdf = await loadHtml2Pdf();
 
-    const { contact, summary, skills, experience, education, projects } =
+    const settings = (await getSettings()) || { resumeContentSections: [] } as any;
+    const includeSet = new Set([
+      ...DEFAULT_IMMUTABLE_SECTIONS,
+      ...((settings.resumeContentSections || []) as string[]),
+    ]);
+
+    const includeSummary = includeSet.has("Professional Summary");
+    const includeSkills = includeSet.has("Skills");
+    const includeExperience = includeSet.has("Experience");
+    const includeEducation = includeSet.has("Education");
+    const includeProjects = includeSet.has("Projects");
+    const includeCertifications = includeSet.has("Certifications");
+    const includeAchievements = includeSet.has("Achievements") || includeSet.has("Key Accomplishments");
+    const includePublications = includeSet.has("Publications");
+    const includeHobbies = includeSet.has("Hobbies") || includeSet.has("Hobbies & Interests");
+
+    const { contact, summary, skills, experience, education, projects, certifications, achievements, publications, hobbies } =
       resume;
 
     const htmlContent = `
