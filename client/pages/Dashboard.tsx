@@ -69,24 +69,29 @@ export const Dashboard: React.FC = () => {
         <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-secondary/10 blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-heading leading-tight mb-6">
-                <span className="text-gradient">Land Your Dream Job</span> with
-                AI-Powered Resume Tailoring
-              </h1>
-              <p className="text-lg text-muted-foreground mb-8">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <div className="inline-block px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                  <p className="text-sm font-semibold text-primary">AI-Powered Resume Optimization</p>
+                </div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-heading leading-tight">
+                  <span className="text-gradient">Land Your Dream Job</span> with
+                  AI-Powered Resume Tailoring
+                </h1>
+              </div>
+              <p className="text-lg text-muted-foreground leading-relaxed">
                 ResumeMatch Pro automatically tailors your resume for every job
                 application, optimizes for ATS, and calculates match scores in
                 seconds.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 {!masterResume ? (
                   <Link
                     to="/upload"
-                    className="inline-flex items-center justify-center px-8 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
+                    className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
                   >
                     <FileUp className="h-5 w-5 mr-2" />
                     Upload Your Resume
@@ -96,7 +101,7 @@ export const Dashboard: React.FC = () => {
                   <>
                     <Link
                       to="/tailor"
-                      className="inline-flex items-center justify-center px-8 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
+                      className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
                     >
                       <Zap className="h-5 w-5 mr-2" />
                       Tailor Your Resume
@@ -104,7 +109,7 @@ export const Dashboard: React.FC = () => {
                     </Link>
                     <Link
                       to="/history"
-                      className="inline-flex items-center justify-center px-8 py-3 rounded-lg border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition-all"
+                      className="inline-flex items-center justify-center px-8 py-4 rounded-lg border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition-all"
                     >
                       View History
                     </Link>
@@ -112,11 +117,11 @@ export const Dashboard: React.FC = () => {
                 )}
               </div>
 
-              <div className="mt-12 pt-8 border-t border-border">
-                <p className="text-sm text-muted-foreground mb-4">
+              <div className="pt-6 border-t border-border">
+                <p className="text-sm text-muted-foreground mb-3">
                   Trusted by job seekers:
                 </p>
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm font-medium">
                   <Users className="h-5 w-5 text-primary" />
                   <span>10,000+ successful applications</span>
                 </div>
