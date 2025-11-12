@@ -46,7 +46,7 @@ async function initGemini(): Promise<GoogleGenerativeAI> {
 }
 
 // Retry helper for transient Gemini/API errors (model overloaded, 503s, rate limits)
-async function withRetry(
+export async function withRetry(
   fn: () => Promise<any>,
   retries = 3,
   initialDelay = 800,
@@ -75,6 +75,13 @@ async function withRetry(
       delay *= 2;
     }
   }
+}
+
+export async function generateContentWithRetry(prompt: string, modelName = "gemini-2.5-flash") {
+  const genAI = await initGemini();
+  const model = genAI.getGenerativeModel({ model: modelName });
+  const result = await withRetry(() => model.generateContent(prompt));
+  return result.response.text();
 }
 
 export interface TailoredResumeResult {
