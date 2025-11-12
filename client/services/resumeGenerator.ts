@@ -383,7 +383,7 @@ export async function generateResumeDocx(
     });
   }
 
-  if (projects && projects.length > 0) {
+  if (includeProjects && projects && projects.length > 0) {
     sections.push(
       new Paragraph({
         text: "PROJECTS",
