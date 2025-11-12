@@ -474,9 +474,25 @@ if (tailorBtn) {
       if (loadingEl) loadingEl.classList.add("hidden");
       if (errorEl) {
         errorEl.classList.remove("hidden");
-        const errorMsg =
-          error instanceof Error ? error.message : "Unknown error";
-        errorEl.textContent = `✗ Error: ${errorMsg}`;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const transient = /overload|503|temporarily unavailable|rate limit|server error/i.test(errorMsg);
+        if (transient) {
+          // Show a friendly retry UI for transient AI errors
+          errorEl.innerHTML = `✗ Temporary service error: ${errorMsg}. The AI service may be overloaded — please try again in a few seconds. <button id="retry-tailor" class="btn">Retry</button>`;
+          // Attach retry handler
+          setTimeout(() => {
+            const retryBtn = document.getElementById("retry-tailor");
+            if (retryBtn) {
+              retryBtn.addEventListener("click", () => {
+                if (tailorBtn) {
+                  tailorBtn.click();
+                }
+              });
+            }
+          }, 50);
+        } else {
+          errorEl.textContent = `✗ Error: ${errorMsg}`;
+        }
       }
       console.error("[Popup] Tailoring error:", error);
       if (tailorBtn) tailorBtn.disabled = false;
