@@ -347,31 +347,36 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* CTA Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold font-heading mb-6">
-          Ready to Land Your Dream Job?
-        </h2>
-        <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Start tailoring your resume for every application and increase your
-          chances of getting noticed.
-        </p>
-        {!masterResume ? (
-          <Link
-            to="/upload"
-            className="inline-flex items-center px-8 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
-          >
-            Get Started Now
-            <ArrowRight className="h-5 w-5 ml-2" />
-          </Link>
-        ) : (
-          <Link
-            to="/tailor"
-            className="inline-flex items-center px-8 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
-          >
-            Tailor Your Resume
-            <Zap className="h-5 w-5 ml-2" />
-          </Link>
-        )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+        <div className="relative rounded-3xl bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border border-primary/20 p-12 sm:p-20 text-center overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative z-10 space-y-6">
+            <h2 className="text-4xl sm:text-5xl font-bold font-heading">
+              Ready to Land Your Dream Job?
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Start tailoring your resume for every application and increase your
+              chances of getting noticed by hiring managers.
+            </p>
+            {!masterResume ? (
+              <Link
+                to="/upload"
+                className="inline-flex items-center px-8 py-4 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
+              >
+                Get Started Now
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Link>
+            ) : (
+              <Link
+                to="/tailor"
+                className="inline-flex items-center px-8 py-4 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all hover:-translate-y-0.5"
+              >
+                Tailor Your Resume
+                <Zap className="h-5 w-5 ml-2" />
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
