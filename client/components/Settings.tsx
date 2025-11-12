@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, Eye, EyeOff } from "lucide-react";
-import {
-  getSettings,
-  setSettings,
-  AppSettings,
-} from "@/utils/storage";
+import { getSettings, setSettings, AppSettings } from "@/utils/storage";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -66,15 +62,15 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         onClose();
       }, 1500);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save settings"
-      );
+      setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handlePreferenceChange = (key: keyof AppSettings["resumeContentPreferences"]) => {
+  const handlePreferenceChange = (
+    key: keyof AppSettings["resumeContentPreferences"],
+  ) => {
     setSettingsState({
       ...settings,
       resumeContentPreferences: {
@@ -209,15 +205,12 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                     }
                     onChange={() =>
                       handlePreferenceChange(
-                        pref.key as keyof AppSettings["resumeContentPreferences"]
+                        pref.key as keyof AppSettings["resumeContentPreferences"],
                       )
                     }
                     className="mt-1 w-4 h-4 rounded border-border accent-primary"
                   />
-                  <label
-                    htmlFor={pref.key}
-                    className="flex-1 cursor-pointer"
-                  >
+                  <label htmlFor={pref.key} className="flex-1 cursor-pointer">
                     <div className="text-sm font-medium">{pref.label}</div>
                     <div className="text-xs text-muted-foreground">
                       {pref.description}
@@ -237,7 +230,9 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {saveSuccess && (
             <div className="p-3 rounded-lg bg-green-600/10 border border-green-600/20">
-              <p className="text-sm text-green-600">✓ Settings saved successfully!</p>
+              <p className="text-sm text-green-600">
+                ✓ Settings saved successfully!
+              </p>
             </div>
           )}
 

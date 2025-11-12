@@ -74,11 +74,13 @@ export const Dashboard: React.FC = () => {
             <div className="space-y-8">
               <div className="space-y-4">
                 <div className="inline-block px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-                  <p className="text-sm font-semibold text-primary">AI-Powered Resume Optimization</p>
+                  <p className="text-sm font-semibold text-primary">
+                    AI-Powered Resume Optimization
+                  </p>
                 </div>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-heading leading-tight">
-                  <span className="text-gradient">Land Your Dream Job</span> with
-                  AI-Powered Resume Tailoring
+                  <span className="text-gradient">Land Your Dream Job</span>{" "}
+                  with AI-Powered Resume Tailoring
                 </h1>
               </div>
               <p className="text-lg text-muted-foreground leading-relaxed">
@@ -138,9 +140,15 @@ export const Dashboard: React.FC = () => {
                         {masterResume?.contact.name ?? "John Doe"}
                       </h3>
                       <div className="space-y-1 text-sm text-muted-foreground">
-                        <p>{masterResume?.contact.email ?? "john.doe@example.com"}</p>
+                        <p>
+                          {masterResume?.contact.email ??
+                            "john.doe@example.com"}
+                        </p>
                         <p>{masterResume?.contact.phone ?? "(555) 555-5555"}</p>
-                        <p>{masterResume?.contact.location ?? "San Francisco, CA"}</p>
+                        <p>
+                          {masterResume?.contact.location ??
+                            "San Francisco, CA"}
+                        </p>
                       </div>
                     </div>
 
@@ -295,8 +303,12 @@ export const Dashboard: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                  <h3 className="font-semibold text-lg mb-2">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
               </div>
             </div>
@@ -318,7 +330,9 @@ export const Dashboard: React.FC = () => {
                     className="group flex items-center justify-between p-5 rounded-lg border border-border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-300"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{app.jobTitle}</p>
+                      <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {app.jobTitle}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {app.company}
                       </p>
@@ -355,8 +369,8 @@ export const Dashboard: React.FC = () => {
               Ready to Land Your Dream Job?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Start tailoring your resume for every application and increase your
-              chances of getting noticed by hiring managers.
+              Start tailoring your resume for every application and increase
+              your chances of getting noticed by hiring managers.
             </p>
             {!masterResume ? (
               <Link

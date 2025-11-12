@@ -24,7 +24,10 @@ function App() {
         </button>
 
         {/* Settings Modal */}
-        <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        <Settings
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
 
         <Routes>
           <Route path="/" element={<Dashboard />} />
