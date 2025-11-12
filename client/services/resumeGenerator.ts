@@ -347,7 +347,7 @@ export async function generateResumeDocx(
     });
   }
 
-  if (education.length > 0) {
+  if (includeEducation && education.length > 0) {
     sections.push(
       new Paragraph({
         text: "EDUCATION",
