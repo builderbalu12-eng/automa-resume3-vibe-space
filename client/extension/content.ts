@@ -192,5 +192,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: false, error: e instanceof Error ? e.message : String(e) });
     }
     return true; // async response
+  } else if (request.action === "syncApplications") {
+    console.log("[Content Script] Syncing applications to localStorage");
+    try {
+      const apps = Array.isArray(request.apps) ? request.apps : [];
+      localStorage.setItem("resumematch_applications", JSON.stringify(apps));
+      sendResponse({ success: true });
+    } catch (e) {
+      console.error("[Content Script] Failed to sync applications:", e);
+      sendResponse({ success: false, error: e instanceof Error ? e.message : String(e) });
+    }
+    return true;
   }
 });
