@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
+import { getApiKeyFromSettings } from "@/utils/storage";
 
 let GEMINI_API_KEY = "";
 
@@ -21,14 +22,22 @@ if (
 
 let client: GoogleGenerativeAI | null = null;
 
-function initGemini(): GoogleGenerativeAI {
+async function initGemini(): Promise<GoogleGenerativeAI> {
   if (client) return client;
-  if (!GEMINI_API_KEY) {
+
+  // Try to get API key from localStorage first
+  let apiKey = GEMINI_API_KEY;
+  if (!apiKey) {
+    apiKey = await getApiKeyFromSettings();
+  }
+
+  if (!apiKey) {
     throw new Error(
-      "Gemini API key not configured. Set VITE_GOOGLE_GEMINI_API_KEY in .env",
+      "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).",
     );
   }
-  client = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+  client = new GoogleGenerativeAI(apiKey);
   return client;
 }
 
