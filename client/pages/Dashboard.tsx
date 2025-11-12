@@ -245,45 +245,60 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Features Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-3xl sm:text-4xl font-bold font-heading text-center mb-4">
-          How ResumeMatch Pro Works
-        </h2>
-        <p className="text-center text-muted-foreground text-lg mb-12 max-w-2xl mx-auto">
-          Our AI-powered system analyzes job requirements and optimizes your
-          resume for maximum impact
-        </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold font-heading mb-4">
+            How ResumeMatch Pro Works
+          </h2>
+          <p className="text-center text-muted-foreground text-lg max-w-2xl mx-auto">
+            Our AI-powered system analyzes job requirements and optimizes your
+            resume for maximum impact
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-6">
           {[
             {
               icon: FileUp,
               title: "Upload Your Master Resume",
               description:
                 "Upload your professional resume once. We parse and store all your experience, skills, and education.",
+              number: "01",
             },
             {
               icon: Zap,
               title: "AI-Powered Tailoring",
               description:
                 "Our AI analyzes job postings and rewrites your resume to highlight the most relevant skills and experience.",
+              number: "02",
             },
             {
               icon: BarChart3,
               title: "ATS Score Optimization",
               description:
                 "Get real-time ATS compatibility scores and specific suggestions to improve your resume visibility.",
+              number: "03",
             },
           ].map((feature, idx) => (
             <div
               key={idx}
-              className="group rounded-xl border border-border bg-card p-6 hover:shadow-glow transition-all hover:border-primary/50 hover:-translate-y-1"
+              className="group relative rounded-2xl border border-border bg-card p-8 hover:shadow-glow transition-all hover:border-primary/50 hover:-translate-y-1 overflow-hidden"
             >
-              <div className="rounded-lg bg-primary/10 p-3 w-fit mb-4 group-hover:bg-primary/20 transition-colors">
-                <feature.icon className="h-6 w-6 text-primary" />
+              <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="rounded-lg bg-primary/10 p-3 group-hover:bg-primary/20 transition-colors">
+                    <feature.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="text-4xl font-bold text-primary/20 group-hover:text-primary/30 transition-colors">
+                    {feature.number}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                </div>
               </div>
-              <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.description}</p>
             </div>
           ))}
         </div>
