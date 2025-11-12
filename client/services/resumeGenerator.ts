@@ -138,7 +138,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        projects && projects.length > 0
+        includeProjects && projects && projects.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Projects</h2>
         ${projects
@@ -529,10 +529,10 @@ export async function downloadResumePDF(
         }
 
         ${
-          projects && projects.length > 0
-            ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Projects</h2>
-          ${projects
+        includeProjects && projects && projects.length > 0
+          ? `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Projects</h2>
+        ${projects
             .map(
               (project) => `
             <div style="font-size: 11px; margin-bottom: 6px;">
