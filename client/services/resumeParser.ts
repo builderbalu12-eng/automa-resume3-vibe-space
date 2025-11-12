@@ -62,8 +62,7 @@ ${resumeText}
 Return ONLY valid JSON, no other text.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    const responseText = await generateContentWithRetry(prompt);
 
     // Extract JSON from response (handle markdown code blocks if present)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
