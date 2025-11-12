@@ -50,6 +50,7 @@ export interface TailoredResumeResult {
   tailoredResume: ResumeData;
   atsScore: ATSScore;
   summary: string;
+  omittedSections?: string[];
 }
 
 export async function isJobPostingPage(pageContent: string): Promise<boolean> {
@@ -726,6 +727,9 @@ USER PREFERENCES:
 - Only include/tailor these sections: ${sectionsText}
 ${customInstrText}
 
+IMPORTANT:
+- Do NOT fabricate facts, certifications, or project details. Only generate content for a requested section if there is evidence in the master resume or the job posting that supports it. If you cannot confidently create a section, omit it and list it under "omittedSections" in the JSON.
+
 TASK:
 1. Extract job posting details from the page content
 2. Tailor the provided resume for this specific job
@@ -763,6 +767,9 @@ INSTRUCTIONS:
 4. CREATE SUMMARY:
    - Write a short 2-3 sentence summary of the job and match
 
+5. ADDITIONAL SECTIONS:
+- If user requested extra sections, return them under "additionalSections" as an object where each key is the section name and the value is an array of strings (each string an item/line). If a section cannot be generated, include it under "omittedSections".
+
 Return ONLY valid JSON (no markdown, no explanations):
 {
   "jobTitle": "extracted job title",
@@ -782,7 +789,9 @@ Return ONLY valid JSON (no markdown, no explanations):
   "matchedKeywords": ["keyword 1", "keyword 2", ...],
   "missingKeywords": ["missing keyword 1", ...],
   "improvements": ["improvement 1", "improvement 2", ...],
-  "jobSummary": "2-3 sentence summary of the job and how well the resume matches"
+  "jobSummary": "2-3 sentence summary of the job and how well the resume matches",
+  "additionalSections": {"Section Name": ["item1","item2"]},
+  "omittedSections": ["Section Name"]
 }`;
 
   try {
@@ -850,6 +859,41 @@ Return ONLY valid JSON (no markdown, no explanations):
         : masterResume.skills,
     };
 
+    // Map any additionalSections returned by the model into ResumeData
+    const additional = parsed.additionalSections || parsed.additionalsections || parsed.additional || {};
+    const omittedFromModel = Array.isArray(parsed.omittedSections) ? parsed.omittedSections : (Array.isArray(parsed.omittedsections) ? parsed.omittedsections : []);
+
+    if (additional && typeof additional === "object") {
+      Object.keys(additional).forEach((key) => {
+        const normalized = key.toLowerCase().trim();
+        const items = Array.isArray(additional[key]) ? additional[key].filter((i: any) => i && String(i).trim()).map((i: any) => String(i)) : [];
+        if (!items.length) return;
+
+        if (normalized.includes("certif")) {
+          tailoredResume.certifications = items;
+        } else if (normalized.includes("achiev") || normalized.includes("career") || normalized.includes("accompl")) {
+          tailoredResume.achievements = items;
+        } else if (normalized.includes("project") || normalized.includes("course")) {
+          // Map string items to Project objects with description
+          tailoredResume.projects = items.map((it: string) => ({ title: "", description: it, technologies: [] }));
+        } else if (normalized.includes("publication")) {
+          tailoredResume.publications = items;
+        } else if (normalized.includes("hobb")) {
+          tailoredResume.hobbies = items;
+        } else if (normalized.includes("skill")) {
+          // merge into skills if not present
+          items.forEach((it: string) => {
+            if (!tailoredResume.skills.some((s) => s.toLowerCase() === it.toLowerCase())) {
+              tailoredResume.skills.push(it);
+            }
+          });
+        } else {
+          // Unknown section: push into achievements as fallback
+          tailoredResume.achievements = Array.from(new Set([...(tailoredResume.achievements || []), ...items]));
+        }
+      });
+    }
+
     // Build ATS score
     const atsScore: ATSScore = {
       score: Math.min(100, Math.max(0, parsed.atsScore || 0)),
@@ -875,11 +919,44 @@ Return ONLY valid JSON (no markdown, no explanations):
       parsed.jobSummary ||
       `Match: ${atsScore.score}% for ${jobData.title} at ${jobData.company}`;
 
+    // Determine which requested sections were omitted (no content after tailoring)
+    const includedSectionsSet = new Set<string>();
+    const checkIfPresent = (name: string) => {
+      const n = name.toLowerCase();
+      if (n.includes("summary") && tailoredResume.summary && tailoredResume.summary.trim()) return true;
+      if (n.includes("skill") && tailoredResume.skills && tailoredResume.skills.length > 0) return true;
+      if (n.includes("experience") && tailoredResume.experience && tailoredResume.experience.length > 0) return true;
+      if (n.includes("education") && tailoredResume.education && tailoredResume.education.length > 0) return true;
+      if (n.includes("project") && tailoredResume.projects && tailoredResume.projects.length > 0) return true;
+      if (n.includes("certif") && tailoredResume.certifications && tailoredResume.certifications.length > 0) return true;
+      if ((n.includes("achiev") || n.includes("career") || n.includes("accompl")) && tailoredResume.achievements && tailoredResume.achievements.length > 0) return true;
+      if (n.includes("publication") && tailoredResume.publications && tailoredResume.publications.length > 0) return true;
+      if (n.includes("hobb") && tailoredResume.hobbies && tailoredResume.hobbies.length > 0) return true;
+      return false;
+    };
+
+    const omittedSections: string[] = [];
+    // Use sectionsToInclude from earlier prompt construction if present
+    try {
+      (sectionsToInclude || []).forEach((sec) => {
+        if (!checkIfPresent(sec)) omittedSections.push(sec);
+      });
+      // Also include model-declared omittedSections
+      if (Array.isArray(omittedFromModel) && omittedFromModel.length) {
+        omittedFromModel.forEach((s: string) => {
+          if (!omittedSections.includes(s)) omittedSections.push(s);
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+
     return {
       jobData,
       tailoredResume,
       atsScore,
       summary,
+      omittedSections: omittedSections.length ? omittedSections : undefined,
     };
   } catch (error) {
     console.error("[Gemini] Error analyzing job and tailoring resume:", error);
