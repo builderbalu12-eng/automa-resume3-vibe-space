@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { ResumeData, JobDescription } from "@/types";
-import { getMasterResume } from "@/utils/storage";
+import { getMasterResume, getApiKeyFromSettings } from "@/utils/storage";
 import {
   tailorResumeForJob,
   calculateATSScore,
