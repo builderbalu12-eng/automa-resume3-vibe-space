@@ -73,11 +73,13 @@ export const ApplicationList: React.FC<ApplicationListProps> = ({
 
   return (
     <div className="space-y-3">
-      {applications.map((app) => (
-        <div
-          key={app.id || app._id}
-          className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow"
-        >
+      {applications.map((app) => {
+        const stableKey = (app.id || app._id || `${app.jobTitle || ""}-${app.company || ""}-${app.appliedDate || ""}`);
+        return (
+          <div
+            key={stableKey}
+            className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow"
+          >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
@@ -172,7 +174,8 @@ export const ApplicationList: React.FC<ApplicationListProps> = ({
             </div>
           )}
         </div>
-      ))}
+      )
+      })}
     </div>
   );
 };
