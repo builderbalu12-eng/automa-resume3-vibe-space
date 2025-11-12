@@ -82,7 +82,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        skills && skills.length > 0
+        includeSkills && skills && skills.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Skills</h2>
         <p style="font-size: 11px; margin-bottom: 10px;">${skills.join(" • ")}</p>
@@ -472,13 +472,13 @@ export async function downloadResumePDF(
       }
 
         ${
-          skills && skills.length > 0
-            ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Skills</h2>
-          <p style="font-size: 11px; margin-bottom: 10px;">${skills.join(" • ")}</p>
-        `
-            : ""
-        }
+        includeSkills && skills && skills.length > 0
+          ? `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Skills</h2>
+        <p style="font-size: 11px; margin-bottom: 10px;">${skills.join(" • ")}</p>
+      `
+          : ""
+      }
 
         ${
           experience && experience.length > 0
