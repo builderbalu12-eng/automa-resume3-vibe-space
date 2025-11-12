@@ -10,6 +10,7 @@ interface PopupState {
   tailoredResume: ResumeData | null;
   atsScore: ATSScore | null;
   isJobPosting?: boolean | null;
+  omittedSections?: string[] | null;
 }
 
 let state: PopupState = {
@@ -19,6 +20,7 @@ let state: PopupState = {
   tailoredResume: null,
   atsScore: null,
   isJobPosting: null,
+  omittedSections: null,
 };
 
 console.log("[Popup] Script loaded at", new Date().toISOString());
@@ -363,11 +365,20 @@ if (tailorBtn) {
       state.jobData = result.jobData;
       state.tailoredResume = result.tailoredResume;
       state.atsScore = result.atsScore;
+      state.omittedSections = result.omittedSections || null;
 
       if (loadingEl) loadingEl.classList.add("hidden");
       if (successEl) {
         successEl.classList.remove("hidden");
         successEl.textContent = `✓ Resume tailored! ATS Score: ${state.atsScore.score}%`;
+      }
+
+      // If some requested sections were omitted, show a message
+      if (state.omittedSections && state.omittedSections.length) {
+        if (errorEl) {
+          errorEl.classList.remove("hidden");
+          errorEl.textContent = `Some requested sections had no content and were not included: ${state.omittedSections.join(", ")}`;
+        }
       }
 
       // Persist application to extension storage so web app history reflects it
