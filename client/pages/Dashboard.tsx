@@ -286,71 +286,43 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Section (if user has data) */}
-      {masterResume && (
+      {masterResume && recentApplications.length > 0 && (
         <div className="bg-muted/50 py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl sm:text-4xl font-bold font-heading text-center mb-12">
-              Your Application Stats
-            </h2>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center p-8 rounded-xl bg-card border border-border hover:shadow-glow transition-shadow">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {stats.totalApps}
-                </div>
-                <p className="text-muted-foreground">Applications Tailored</p>
-              </div>
-              <div className="text-center p-8 rounded-xl bg-card border border-border hover:shadow-glow transition-shadow">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {stats.avgScore}%
-                </div>
-                <p className="text-muted-foreground">Average ATS Score</p>
-              </div>
-              <div className="text-center p-8 rounded-xl bg-card border border-border hover:shadow-glow transition-shadow">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {stats.successRate}%
-                </div>
-                <p className="text-muted-foreground">Success Rate</p>
-              </div>
-            </div>
-
-            {recentApplications.length > 0 && (
-              <div className="mt-12">
-                <h3 className="text-2xl font-bold font-heading mb-6">
-                  Recent Applications
-                </h3>
-                <div className="grid gap-4">
-                  {recentApplications.map((app) => (
-                    <div
-                      key={app._id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
-                    >
-                      <div>
-                        <p className="font-semibold">{app.jobTitle}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {app.company}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-primary">
-                          {app.atsScore || app.matchPercentage}% Match
-                        </p>
-                        <p className="text-sm text-muted-foreground capitalize">
-                          {app.status}
-                        </p>
-                      </div>
+            <div className="mt-0">
+              <h3 className="text-2xl font-bold font-heading mb-6">
+                Recent Applications
+              </h3>
+              <div className="grid gap-4">
+                {recentApplications.map((app) => (
+                  <div
+                    key={app._id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-semibold">{app.jobTitle}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {app.company}
+                      </p>
                     </div>
-                  ))}
-                </div>
-                <Link
-                  to="/history"
-                  className="inline-flex items-center gap-2 text-primary font-semibold mt-6 hover:underline"
-                >
-                  View all applications <ArrowRight className="h-4 w-4" />
-                </Link>
+                    <div className="text-right">
+                      <p className="font-semibold text-primary">
+                        {app.atsScore || app.matchPercentage}% Match
+                      </p>
+                      <p className="text-sm text-muted-foreground capitalize">
+                        {app.status}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+              <Link
+                to="/history"
+                className="inline-flex items-center gap-2 text-primary font-semibold mt-6 hover:underline"
+              >
+                View all applications <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
