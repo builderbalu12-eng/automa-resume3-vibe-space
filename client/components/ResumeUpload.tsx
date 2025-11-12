@@ -82,37 +82,48 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !isLoading && fileInputRef.current?.click()}
         className={`
           relative w-full rounded-lg border-2 border-dashed p-8
-          transition-all duration-200 cursor-pointer
+          transition-all duration-200
           ${
             dragActive
               ? "border-primary bg-primary/5 scale-105"
               : "border-muted hover:border-primary/50"
           }
-          ${isLoading ? "opacity-50 cursor-not-allowed" : ""}
+          ${isLoading ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
         `}
       >
-        <div className="flex flex-col items-center justify-center gap-4">
-          <div className="rounded-full bg-primary/10 p-4">
-            <Upload className="h-8 w-8 text-primary" />
-          </div>
-          <div className="text-center">
-            <h3 className="font-semibold text-lg">
-              {isLoading ? "Parsing Resume..." : "Upload Your Master Resume"}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Drag and drop your resume or click to browse (DOCX format)
-            </p>
-          </div>
-          {isLoading && (
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-              <span className="text-sm text-muted-foreground">
-                Processing...
-              </span>
-            </div>
+        <div className="flex flex-col items-center justify-center gap-6">
+          {isLoading ? (
+            <>
+              <div className="rounded-full bg-primary/20 p-6 animate-pulse">
+                <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-lg text-primary">Parsing Resume...</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Extracting and analyzing your resume content
+                </p>
+                <div className="mt-4 w-48 h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary animate-pulse" />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-full bg-primary/10 p-4">
+                <Upload className="h-8 w-8 text-primary" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-lg">
+                  Upload Your Master Resume
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Drag and drop your resume or click to browse (DOCX format)
+                </p>
+              </div>
+            </>
           )}
         </div>
       </div>
