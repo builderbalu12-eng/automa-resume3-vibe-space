@@ -305,29 +305,29 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {masterResume && recentApplications.length > 0 && (
-        <div className="bg-muted/50 py-20">
+        <div className="bg-muted/30 py-20 sm:py-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mt-0">
-              <h3 className="text-2xl font-bold font-heading mb-6">
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-bold font-heading mb-8">
                 Recent Applications
               </h3>
               <div className="grid gap-4">
                 {recentApplications.map((app) => (
                   <div
                     key={app._id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
+                    className="group flex items-center justify-between p-5 rounded-lg border border-border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-300"
                   >
-                    <div>
-                      <p className="font-semibold">{app.jobTitle}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{app.jobTitle}</p>
                       <p className="text-sm text-muted-foreground">
                         {app.company}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-primary">
-                        {app.atsScore || app.matchPercentage}% Match
+                    <div className="text-right ml-4 flex-shrink-0">
+                      <p className="font-bold text-lg text-primary">
+                        {app.atsScore || app.matchPercentage}%
                       </p>
-                      <p className="text-sm text-muted-foreground capitalize">
+                      <p className="text-xs text-muted-foreground capitalize font-medium">
                         {app.status}
                       </p>
                     </div>
@@ -336,9 +336,10 @@ export const Dashboard: React.FC = () => {
               </div>
               <Link
                 to="/history"
-                className="inline-flex items-center gap-2 text-primary font-semibold mt-6 hover:underline"
+                className="inline-flex items-center gap-2 text-primary font-semibold mt-8 hover:text-primary/80 transition-colors group"
               >
-                View all applications <ArrowRight className="h-4 w-4" />
+                View all applications
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
