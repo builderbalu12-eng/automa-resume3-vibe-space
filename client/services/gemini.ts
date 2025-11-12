@@ -49,7 +49,7 @@ export interface TailoredResumeResult {
 }
 
 export async function isJobPostingPage(pageContent: string): Promise<boolean> {
-  const genAI = initGemini();
+  const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   // If content looks like HTML, clean it. Otherwise use as plain text
