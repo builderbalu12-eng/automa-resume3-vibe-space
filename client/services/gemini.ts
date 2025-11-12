@@ -390,7 +390,7 @@ export async function analyzeMasterResume(resume: ResumeData): Promise<string> {
 export async function extractJobRequirements(
   jobDescription: string,
 ): Promise<JobDescription> {
-  const genAI = initGemini();
+  const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Extract structured information from this job description. Return JSON with this format:
