@@ -425,6 +425,27 @@ if (tailorBtn) {
             } catch (e) {
               console.warn("[Popup] Could not write to localStorage:", e);
             }
+
+            // Try to sync applications to any open tabs (including the web app) via content scripts
+            try {
+              chrome.tabs.query({}, (tabs) => {
+                tabs.forEach((tab) => {
+                  if (!tab.id) return;
+                  chrome.tabs.sendMessage(
+                    tab.id,
+                    { action: "syncApplications", apps },
+                    () => {
+                      if (chrome.runtime.lastError) {
+                        // Silently ignore if no content script is injected on a tab
+                        return;
+                      }
+                    },
+                  );
+                });
+              });
+            } catch (e) {
+              console.warn("[Popup] Could not broadcast applications to tabs:", e);
+            }
           } catch (e) {
             console.error("[Popup] Error persisting application:", e);
           }
