@@ -430,7 +430,7 @@ export async function tailorResumeForJob(
   masterResume: ResumeData,
   jobDescription: JobDescription,
 ): Promise<ResumeData> {
-  const genAI = initGemini();
+  const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const jobSkills =
