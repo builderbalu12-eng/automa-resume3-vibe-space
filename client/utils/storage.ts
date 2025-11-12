@@ -3,13 +3,7 @@ import { ResumeData, User } from "@/types";
 export interface AppSettings {
   geminiApiKey: string;
   customInstructions: string;
-  resumeContentPreferences: {
-    includeCertifications: boolean;
-    includeAchievements: boolean;
-    includePublications: boolean;
-    includeHobbies: boolean;
-    includeProjects: boolean;
-  };
+  resumeContentSections: string[];
 }
 
 const STORAGE_KEYS = {
