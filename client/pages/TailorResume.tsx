@@ -43,6 +43,10 @@ export const TailorResume: React.FC = () => {
           return;
         }
         setMasterResume(resume);
+
+        // Check if API key is configured
+        const apiKey = await getApiKeyFromSettings();
+        setHasApiKey(!!apiKey);
       } catch (err) {
         setError("Failed to load master resume.");
       } finally {
