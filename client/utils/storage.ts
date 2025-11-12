@@ -1,11 +1,24 @@
 import { ResumeData, User } from "@/types";
 
+export interface AppSettings {
+  geminiApiKey: string;
+  customInstructions: string;
+  resumeContentPreferences: {
+    includeCertifications: boolean;
+    includeAchievements: boolean;
+    includePublications: boolean;
+    includeHobbies: boolean;
+    includeProjects: boolean;
+  };
+}
+
 const STORAGE_KEYS = {
   USER_ID: "resumematch_user_id",
   MASTER_RESUME: "resumematch_master_resume",
   AUTH_TOKEN: "resumematch_auth_token",
   GEMINI_API_KEY: "resumematch_gemini_key",
   LAST_SYNC: "resumematch_last_sync",
+  APP_SETTINGS: "resumematch_settings",
 };
 
 export async function saveToStorage(key: string, value: any): Promise<void> {
