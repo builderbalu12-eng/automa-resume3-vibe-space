@@ -69,9 +69,19 @@ export async function saveApplication(
 
 export async function getApplicationHistory(): Promise<ApplicationRecord[]> {
   try {
-    const history = await getFromStorage(STORAGE_KEYS.APPLICATIONS);
-    if (Array.isArray(history)) return history;
-    if (history && typeof history === "object") return [history];
+    let history: any = await getFromStorage(STORAGE_KEYS.APPLICATIONS);
+
+    // Handle cases where value might be stringified once or twice
+    for (let i = 0; i < 2 && typeof history === "string"; i++) {
+      try {
+        history = JSON.parse(history);
+      } catch {
+        break;
+      }
+    }
+
+    if (Array.isArray(history)) return history as ApplicationRecord[];
+    if (history && typeof history === "object") return [history as ApplicationRecord];
     return [];
   } catch (error) {
     console.error("Error fetching application history:", error);
