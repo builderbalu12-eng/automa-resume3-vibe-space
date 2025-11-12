@@ -475,7 +475,10 @@ if (tailorBtn) {
       if (errorEl) {
         errorEl.classList.remove("hidden");
         const errorMsg = error instanceof Error ? error.message : String(error);
-        const transient = /overload|503|temporarily unavailable|rate limit|server error/i.test(errorMsg);
+        const transient =
+          /overload|503|temporarily unavailable|rate limit|server error/i.test(
+            errorMsg,
+          );
         if (transient) {
           // Show a friendly retry UI for transient AI errors
           errorEl.innerHTML = `✗ Temporary service error: ${errorMsg}. The AI service may be overloaded — please try again in a few seconds. <button id="retry-tailor" class="btn">Retry</button>`;

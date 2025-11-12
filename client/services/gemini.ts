@@ -46,7 +46,11 @@ async function initGemini(): Promise<GoogleGenerativeAI> {
 }
 
 // Retry helper for transient Gemini/API errors (model overloaded, 503s, rate limits)
-async function withRetry(fn: () => Promise<any>, retries = 3, initialDelay = 800) {
+async function withRetry(
+  fn: () => Promise<any>,
+  retries = 3,
+  initialDelay = 800,
+) {
   let attempt = 0;
   let delay = initialDelay;
   while (true) {
@@ -55,9 +59,18 @@ async function withRetry(fn: () => Promise<any>, retries = 3, initialDelay = 800
     } catch (err: any) {
       attempt++;
       const msg = err && (err.message || String(err));
-      const isTransient = msg && (msg.includes("503") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("temporarily unavailable") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("server error"));
+      const isTransient =
+        msg &&
+        (msg.includes("503") ||
+          msg.toLowerCase().includes("overloaded") ||
+          msg.toLowerCase().includes("temporarily unavailable") ||
+          msg.toLowerCase().includes("rate limit") ||
+          msg.toLowerCase().includes("server error"));
       if (!isTransient || attempt > retries) throw err;
-      console.warn(`[Gemini] Transient error, retrying attempt ${attempt}/${retries} in ${delay}ms`, err);
+      console.warn(
+        `[Gemini] Transient error, retrying attempt ${attempt}/${retries} in ${delay}ms`,
+        err,
+      );
       await new Promise((r) => setTimeout(r, delay));
       delay *= 2;
     }
