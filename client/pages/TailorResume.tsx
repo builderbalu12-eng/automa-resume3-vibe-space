@@ -407,9 +407,21 @@ export const TailorResume: React.FC = () => {
                 className="w-full h-[300px] p-3 border border-border rounded-lg bg-background text-foreground font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
 
+              {!hasApiKey && (
+                <div className="mt-4 p-4 rounded-lg bg-amber-600/10 border border-amber-600/20 flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-600">API Key Required</p>
+                    <p className="text-xs text-amber-600/80 mt-1">
+                      Please configure Gemini API key in Settings (⚙️ button in top-right) to use tailor feature.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleTailor}
-                disabled={isTailoring || !jobDescription.trim()}
+                disabled={isTailoring || !jobDescription.trim() || !hasApiKey}
                 className="w-full mt-4 px-6 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isTailoring ? (
