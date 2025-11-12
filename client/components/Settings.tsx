@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, Eye, EyeOff, Plus } from "lucide-react";
-import {
-  getSettings,
-  setSettings,
-  AppSettings,
-} from "@/utils/storage";
+import { getSettings, setSettings, AppSettings } from "@/utils/storage";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -61,9 +57,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         onClose();
       }, 1500);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save settings"
-      );
+      setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
       setIsSaving(false);
     }
@@ -73,7 +67,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     if (e.key === "Enter" && tagInput.trim()) {
       e.preventDefault();
       const newTag = tagInput.trim();
-      
+
       if (!settings.resumeContentSections.includes(newTag)) {
         setSettingsState({
           ...settings,
@@ -88,7 +82,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     setSettingsState({
       ...settings,
       resumeContentSections: settings.resumeContentSections.filter(
-        (tag) => tag !== tagToRemove
+        (tag) => tag !== tagToRemove,
       ),
     });
   };
@@ -180,9 +174,10 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
               Resume Sections to Include
             </label>
             <p className="text-xs text-muted-foreground mb-3">
-              Type a section name and press Enter to add (e.g., "Certifications", "Projects", "Awards")
+              Type a section name and press Enter to add (e.g.,
+              "Certifications", "Projects", "Awards")
             </p>
-            
+
             {/* Tag Input */}
             <div className="relative mb-4">
               <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-background focus-within:ring-2 focus-within:ring-primary">
@@ -220,7 +215,8 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <p className="text-xs text-muted-foreground italic">
-                No sections added. Add sections to include them in tailored resumes.
+                No sections added. Add sections to include them in tailored
+                resumes.
               </p>
             )}
           </div>
@@ -234,7 +230,9 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {saveSuccess && (
             <div className="p-3 rounded-lg bg-green-600/10 border border-green-600/20">
-              <p className="text-sm text-green-600">✓ Settings saved successfully!</p>
+              <p className="text-sm text-green-600">
+                ✓ Settings saved successfully!
+              </p>
             </div>
           )}
 

@@ -411,9 +411,12 @@ export const TailorResume: React.FC = () => {
                 <div className="mt-4 p-4 rounded-lg bg-amber-600/10 border border-amber-600/20 flex gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-amber-600">API Key Required</p>
+                    <p className="text-sm font-medium text-amber-600">
+                      API Key Required
+                    </p>
                     <p className="text-xs text-amber-600/80 mt-1">
-                      Please configure Gemini API key in Settings (⚙️ button in top-right) to use tailor feature.
+                      Please configure Gemini API key in Settings (⚙️ button in
+                      top-right) to use tailor feature.
                     </p>
                   </div>
                 </div>

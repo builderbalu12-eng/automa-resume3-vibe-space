@@ -101,7 +101,9 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
                 <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent" />
               </div>
               <div className="text-center">
-                <h3 className="font-semibold text-lg text-primary">Parsing Resume...</h3>
+                <h3 className="font-semibold text-lg text-primary">
+                  Parsing Resume...
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Extracting and analyzing your resume content
                 </p>
