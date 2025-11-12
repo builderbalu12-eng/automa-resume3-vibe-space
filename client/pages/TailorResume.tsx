@@ -20,6 +20,7 @@ export const TailorResume: React.FC = () => {
   const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(false);
 
   const [tailorState, setTailorState] = useState<{
     tailored: ResumeData | null;
