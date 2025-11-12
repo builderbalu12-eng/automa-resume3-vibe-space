@@ -45,6 +45,25 @@ async function initGemini(): Promise<GoogleGenerativeAI> {
   return client;
 }
 
+// Retry helper for transient Gemini/API errors (model overloaded, 503s, rate limits)
+async function withRetry(fn: () => Promise<any>, retries = 3, initialDelay = 800) {
+  let attempt = 0;
+  let delay = initialDelay;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      attempt++;
+      const msg = err && (err.message || String(err));
+      const isTransient = msg && (msg.includes("503") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("temporarily unavailable") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("server error"));
+      if (!isTransient || attempt > retries) throw err;
+      console.warn(`[Gemini] Transient error, retrying attempt ${attempt}/${retries} in ${delay}ms`, err);
+      await new Promise((r) => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+}
+
 export interface TailoredResumeResult {
   jobData: JobDescription;
   tailoredResume: ResumeData;
@@ -141,7 +160,7 @@ export async function isJobPostingPage(pageContent: string): Promise<boolean> {
       return false;
     }
 
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => model.generateContent(prompt));
     const text = result.response.text().trim();
 
     console.log(
@@ -270,7 +289,7 @@ ${cleanContent}`;
       return null;
     }
 
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => model.generateContent(prompt));
     const text = result.response.text().trim();
 
     console.log(
@@ -388,7 +407,7 @@ export async function analyzeMasterResume(resume: ResumeData): Promise<string> {
   
   Provide a 2-3 sentence analysis of this candidate's profile.`;
 
-  const result = await model.generateContent(prompt);
+  const result = await withRetry(() => model.generateContent(prompt));
   return result.response.text();
 }
 
@@ -410,7 +429,7 @@ export async function extractJobRequirements(
   Job Description:
   ${jobDescription}`;
 
-  const result = await model.generateContent(prompt);
+  const result = await withRetry(() => model.generateContent(prompt));
   const text = result.response.text();
 
   try {
@@ -506,7 +525,7 @@ export async function tailorResumeForJob(
   }`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => model.generateContent(prompt));
     const text = result.response.text().trim();
 
     console.log("Tailor response received, length:", text.length);
@@ -603,7 +622,7 @@ export async function calculateATSScore(
   Be honest and practical in your assessment.`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => model.generateContent(prompt));
     const text = result.response.text().trim();
 
     console.log("ATS Score response received, length:", text.length);
@@ -797,7 +816,7 @@ Return ONLY valid JSON (no markdown, no explanations):
   try {
     console.log("[Gemini] Analyzing job and tailoring resume...");
 
-    const result = await model.generateContent(prompt);
+    const result = await withRetry(() => model.generateContent(prompt));
     const text = result.response.text().trim();
 
     console.log("[Gemini] Response received, parsing...");
