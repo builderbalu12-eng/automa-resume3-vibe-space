@@ -1,8 +1,6 @@
 import { ResumeData, ContactInfo, Experience, Education } from "@/types";
 import mammoth from "mammoth";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY || "";
+import { generateContentWithRetry } from "@/services/gemini";
 
 export async function parseDocxFile(file: File): Promise<ResumeData> {
   const arrayBuffer = await file.arrayBuffer();
@@ -12,14 +10,12 @@ export async function parseDocxFile(file: File): Promise<ResumeData> {
   // First do basic parsing
   let resume = parseResumeText(text);
 
-  // Then enhance with Gemini if API key is available
-  if (GEMINI_API_KEY) {
-    try {
-      resume = await enhanceWithGemini(resume, text);
-    } catch (error) {
-      console.warn("Gemini enhancement failed, using basic parsing:", error);
-      // Continue with basic parsing if Gemini fails
-    }
+  // Then attempt to enhance with Gemini (best-effort)
+  try {
+    resume = await enhanceWithGemini(resume, text);
+  } catch (error) {
+    console.warn("Gemini enhancement failed or unavailable, using basic parsing:", error);
+    // Continue with basic parsing if Gemini fails
   }
 
   return resume;
