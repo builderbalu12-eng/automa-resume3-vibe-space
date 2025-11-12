@@ -418,12 +418,75 @@ export async function generateResumeDocx(
     });
   }
 
+  if (includeCertifications && certifications && certifications.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "CERTIFICATIONS",
+        bold: true,
+        size: 24,
+        border: { bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 6 } },
+        spacing: { after: 200 },
+      }),
+    );
+    certifications.forEach((cert) => {
+      sections.push(
+        new Paragraph({ text: cert, size: 22, spacing: { after: 100 }, indent: { left: 720 } }),
+      );
+    });
+  }
+
+  if (includeAchievements && achievements && achievements.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "ACHIEVEMENTS",
+        bold: true,
+        size: 24,
+        border: { bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 6 } },
+        spacing: { after: 200 },
+      }),
+    );
+    achievements.forEach((ach) => {
+      sections.push(
+        new Paragraph({ text: ach, size: 22, spacing: { after: 100 }, indent: { left: 720 } }),
+      );
+    });
+  }
+
+  if (includePublications && publications && publications.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "PUBLICATIONS",
+        bold: true,
+        size: 24,
+        border: { bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 6 } },
+        spacing: { after: 200 },
+      }),
+    );
+    publications.forEach((pub) => {
+      sections.push(
+        new Paragraph({ text: pub, size: 22, spacing: { after: 100 }, indent: { left: 720 } }),
+      );
+    });
+  }
+
+  if (includeHobbies && hobbies && hobbies.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "HOBBIES & INTERESTS",
+        bold: true,
+        size: 24,
+        border: { bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 6 } },
+        spacing: { after: 200 },
+      }),
+    );
+    sections.push(
+      new Paragraph({ text: hobbies.join(" • "), size: 22, spacing: { after: 200 } }),
+    );
+  }
+
   const doc = new Document({
     sections: [
-      {
-        properties: {},
-        children: sections,
-      },
+      { properties: {}, children: sections },
     ],
   });
 
