@@ -120,7 +120,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        education && education.length > 0
+        includeEducation && education && education.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Education</h2>
         ${education
@@ -511,10 +511,10 @@ export async function downloadResumePDF(
         }
 
         ${
-          education && education.length > 0
-            ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Education</h2>
-          ${education
+        includeEducation && education && education.length > 0
+          ? `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Education</h2>
+        ${education
             .map(
               (edu) => `
             <div style="font-size: 11px; margin-bottom: 6px;">
