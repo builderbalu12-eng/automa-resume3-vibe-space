@@ -647,7 +647,7 @@ export async function analyzeJobAndTailorResume(
   pageHTML: string,
   masterResume: ResumeData,
 ): Promise<TailoredResumeResult> {
-  const genAI = initGemini();
+  const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   // Clean HTML
