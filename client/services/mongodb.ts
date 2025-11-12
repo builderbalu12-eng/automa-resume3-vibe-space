@@ -81,7 +81,8 @@ export async function getApplicationHistory(): Promise<ApplicationRecord[]> {
     }
 
     if (Array.isArray(history)) return history as ApplicationRecord[];
-    if (history && typeof history === "object") return [history as ApplicationRecord];
+    if (history && typeof history === "object")
+      return [history as ApplicationRecord];
     return [];
   } catch (error) {
     console.error("Error fetching application history:", error);
