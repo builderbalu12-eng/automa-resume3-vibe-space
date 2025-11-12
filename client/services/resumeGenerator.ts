@@ -288,7 +288,7 @@ export async function generateResumeDocx(
     );
   }
 
-  if (experience.length > 0) {
+  if (includeExperience && experience.length > 0) {
     sections.push(
       new Paragraph({
         text: "PROFESSIONAL EXPERIENCE",
