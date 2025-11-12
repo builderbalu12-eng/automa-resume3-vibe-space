@@ -240,7 +240,7 @@ export async function generateResumeDocx(
     }),
   ];
 
-  if (summary?.trim()) {
+  if (includeSummary && summary?.trim()) {
     sections.push(
       new Paragraph({
         text: "PROFESSIONAL SUMMARY",
