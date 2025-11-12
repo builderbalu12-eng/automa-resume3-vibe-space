@@ -181,7 +181,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               "[Content Script] Error forwarding analyzeJob:",
               chrome.runtime.lastError.message,
             );
-            sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError.message,
+            });
           } else {
             sendResponse({ success: Boolean(response?.success) });
           }
@@ -189,7 +192,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       );
     } catch (e) {
       console.error("[Content Script] Failed to capture page:", e);
-      sendResponse({ success: false, error: e instanceof Error ? e.message : String(e) });
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
     return true; // async response
   } else if (request.action === "syncApplications") {
@@ -200,7 +206,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     } catch (e) {
       console.error("[Content Script] Failed to sync applications:", e);
-      sendResponse({ success: false, error: e instanceof Error ? e.message : String(e) });
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
     return true;
   }

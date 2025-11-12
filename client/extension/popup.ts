@@ -444,7 +444,10 @@ if (tailorBtn) {
                 });
               });
             } catch (e) {
-              console.warn("[Popup] Could not broadcast applications to tabs:", e);
+              console.warn(
+                "[Popup] Could not broadcast applications to tabs:",
+                e,
+              );
             }
           } catch (e) {
             console.error("[Popup] Error persisting application:", e);
@@ -519,20 +522,32 @@ if (customAnalyseBtn) {
           });
         });
 
-      const execCapture = (tabId: number): Promise<{ html: string; url: string } | null> =>
+      const execCapture = (
+        tabId: number,
+      ): Promise<{ html: string; url: string } | null> =>
         new Promise((resolve) => {
           try {
             chrome.scripting.executeScript(
               {
                 target: { tabId },
-                func: () => ({ html: document.documentElement.outerHTML, url: location.href }),
+                func: () => ({
+                  html: document.documentElement.outerHTML,
+                  url: location.href,
+                }),
               },
               (results: any) => {
                 if (chrome.runtime.lastError) {
-                  console.warn("[Popup] executeScript error:", chrome.runtime.lastError.message);
+                  console.warn(
+                    "[Popup] executeScript error:",
+                    chrome.runtime.lastError.message,
+                  );
                   resolve(null);
                 } else {
-                  resolve(results && results[0] && results[0].result ? results[0].result : null);
+                  resolve(
+                    results && results[0] && results[0].result
+                      ? results[0].result
+                      : null,
+                  );
                 }
               },
             );
@@ -552,7 +567,10 @@ if (customAnalyseBtn) {
       state.isJobPosting = null;
 
       // Store in background (optional) so re-opened popup can fetch
-      chrome.runtime.sendMessage({ action: "analyzeJob", pageHTML: payload.html, pageURL: payload.url }, () => {});
+      chrome.runtime.sendMessage(
+        { action: "analyzeJob", pageHTML: payload.html, pageURL: payload.url },
+        () => {},
+      );
 
       // Try detecting if it's a job page (best-effort)
       try {
