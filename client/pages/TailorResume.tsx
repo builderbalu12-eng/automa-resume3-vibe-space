@@ -63,6 +63,11 @@ export const TailorResume: React.FC = () => {
       return;
     }
 
+    if (!hasApiKey) {
+      setError("Please configure Gemini API key in Settings (⚙️ button) first");
+      return;
+    }
+
     setIsTailoring(true);
     setError(null);
     setSuccess(null);
