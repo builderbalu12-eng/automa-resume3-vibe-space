@@ -82,12 +82,18 @@ export async function getApplicationHistory(): Promise<ApplicationRecord[]> {
     }
 
     let localArray: ApplicationRecord[] = [];
-    if (Array.isArray(localHistory)) localArray = localHistory as ApplicationRecord[];
-    else if (localHistory && typeof localHistory === "object") localArray = [localHistory as ApplicationRecord];
+    if (Array.isArray(localHistory))
+      localArray = localHistory as ApplicationRecord[];
+    else if (localHistory && typeof localHistory === "object")
+      localArray = [localHistory as ApplicationRecord];
 
     // Also try to read directly from chrome.storage.sync if available (extension context)
     let extArray: ApplicationRecord[] = [];
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
+    if (
+      typeof chrome !== "undefined" &&
+      chrome.storage &&
+      chrome.storage.sync
+    ) {
       try {
         const extRaw: any = await new Promise((resolve) => {
           chrome.storage.sync.get([STORAGE_KEYS.APPLICATIONS], (res) => {
@@ -102,8 +108,10 @@ export async function getApplicationHistory(): Promise<ApplicationRecord[]> {
             break;
           }
         }
-        if (Array.isArray(extHistory)) extArray = extHistory as ApplicationRecord[];
-        else if (extHistory && typeof extHistory === "object") extArray = [extHistory as ApplicationRecord];
+        if (Array.isArray(extHistory))
+          extArray = extHistory as ApplicationRecord[];
+        else if (extHistory && typeof extHistory === "object")
+          extArray = [extHistory as ApplicationRecord];
       } catch (e) {
         // ignore
       }

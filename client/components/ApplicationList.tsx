@@ -74,107 +74,112 @@ export const ApplicationList: React.FC<ApplicationListProps> = ({
   return (
     <div className="space-y-3">
       {applications.map((app) => {
-        const stableKey = (app.id || app._id || `${app.jobTitle || ""}-${app.company || ""}-${app.appliedDate || ""}`);
+        const stableKey =
+          app.id ||
+          app._id ||
+          `${app.jobTitle || ""}-${app.company || ""}-${app.appliedDate || ""}`;
         return (
           <div
             key={stableKey}
             className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow"
           >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div>
-                  <h3 className="font-semibold text-base">{app.jobTitle}</h3>
-                  <p className="text-sm text-muted-foreground">{app.company}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <div
-                  className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(app.status)}`}
-                >
-                  {getStatusIcon(app.status)}
-                  {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                </div>
-
-                <div className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  {app.atsScore || app.matchPercentage}% Match
-                </div>
-
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(app.appliedDate), "MMM d, yyyy")}
-                </span>
-              </div>
-
-              {app.jobUrl && (
-                <a
-                  href={app.jobUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline flex items-center gap-1 w-fit"
-                >
-                  View job posting <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </div>
-
-            <div className="flex gap-2 ml-4">
-              <button
-                onClick={() =>
-                  setExpandedId(
-                    expandedId === (app.id || app._id)
-                      ? null
-                      : app.id || app._id,
-                  )
-                }
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {expandedId === (app.id || app._id) && (
-            <div className="mt-4 pt-4 border-t border-border space-y-3">
-              {onStatusChange && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Change Status
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {(["applied"] as const).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          onStatusChange(app.id || app._id || "", status);
-                          setExpandedId(null);
-                        }}
-                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                          app.status === status
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted hover:bg-muted/80"
-                        }`}
-                      >
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </button>
-                    ))}
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <div>
+                    <h3 className="font-semibold text-base">{app.jobTitle}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {app.company}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Description
-                </p>
-                <p className="text-sm text-foreground line-clamp-3">
-                  {app.jobDescription?.description ||
-                    "No description available"}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <div
+                    className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(app.status)}`}
+                  >
+                    {getStatusIcon(app.status)}
+                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                  </div>
+
+                  <div className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    {app.atsScore || app.matchPercentage}% Match
+                  </div>
+
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(app.appliedDate), "MMM d, yyyy")}
+                  </span>
+                </div>
+
+                {app.jobUrl && (
+                  <a
+                    href={app.jobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1 w-fit"
+                  >
+                    View job posting <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+
+              <div className="flex gap-2 ml-4">
+                <button
+                  onClick={() =>
+                    setExpandedId(
+                      expandedId === (app.id || app._id)
+                        ? null
+                        : app.id || app._id,
+                    )
+                  }
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          )}
-        </div>
-      )
+
+            {expandedId === (app.id || app._id) && (
+              <div className="mt-4 pt-4 border-t border-border space-y-3">
+                {onStatusChange && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                      Change Status
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {(["applied"] as const).map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            onStatusChange(app.id || app._id || "", status);
+                            setExpandedId(null);
+                          }}
+                          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                            app.status === status
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted hover:bg-muted/80"
+                          }`}
+                        >
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">
+                    Description
+                  </p>
+                  <p className="text-sm text-foreground line-clamp-3">
+                    {app.jobDescription?.description ||
+                      "No description available"}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
       })}
     </div>
   );
