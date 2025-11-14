@@ -12,6 +12,7 @@ import {
   WidthType,
 } from "docx";
 import { ResumeData } from "@/types";
+import { getSettings, DEFAULT_IMMUTABLE_SECTIONS } from "@/utils/storage";
 
 // Load html2pdf from CDN and generate actual PDF
 async function loadHtml2Pdf(): Promise<any> {
@@ -40,7 +41,37 @@ async function generatePDFBlobProper(
   company: string,
   jobTitle: string,
 ): Promise<Blob> {
-  const { contact, summary, skills, experience, education, projects } = resume;
+  const settings =
+    (await getSettings()) || ({ resumeContentSections: [] } as any);
+  const includeSet = new Set([
+    ...DEFAULT_IMMUTABLE_SECTIONS,
+    ...((settings.resumeContentSections || []) as string[]),
+  ]);
+
+  const includeSummary = includeSet.has("Professional Summary");
+  const includeSkills = includeSet.has("Skills");
+  const includeExperience = includeSet.has("Experience");
+  const includeEducation = includeSet.has("Education");
+  const includeProjects = includeSet.has("Projects");
+  const includeCertifications = includeSet.has("Certifications");
+  const includeAchievements =
+    includeSet.has("Achievements") || includeSet.has("Key Accomplishments");
+  const includePublications = includeSet.has("Publications");
+  const includeHobbies =
+    includeSet.has("Hobbies") || includeSet.has("Hobbies & Interests");
+
+  const {
+    contact,
+    summary,
+    skills,
+    experience,
+    education,
+    projects,
+    certifications,
+    achievements,
+    publications,
+    hobbies,
+  } = resume;
 
   // Build formatted HTML content
   const htmlContent = `
@@ -56,7 +87,7 @@ async function generatePDFBlobProper(
       </div>
 
       ${
-        summary?.trim()
+        includeSummary && summary?.trim()
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Summary</h2>
         <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${summary}</p>
@@ -65,7 +96,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        skills && skills.length > 0
+        includeSkills && skills && skills.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Skills</h2>
         <p style="font-size: 11px; margin-bottom: 10px;">${skills.join(" • ")}</p>
@@ -74,7 +105,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        experience && experience.length > 0
+        includeExperience && experience && experience.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Experience</h2>
         ${experience
@@ -103,7 +134,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        education && education.length > 0
+        includeEducation && education && education.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Education</h2>
         ${education
@@ -121,7 +152,7 @@ async function generatePDFBlobProper(
       }
 
       ${
-        projects && projects.length > 0
+        includeProjects && projects && projects.length > 0
           ? `
         <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Projects</h2>
         ${projects
@@ -184,7 +215,37 @@ export async function generateResumeDocx(
   company: string,
   jobTitle: string,
 ): Promise<Blob> {
-  const { contact, summary, skills, experience, education, projects } = resume;
+  const settings =
+    (await getSettings()) || ({ resumeContentSections: [] } as any);
+  const includeSet = new Set([
+    ...DEFAULT_IMMUTABLE_SECTIONS,
+    ...((settings.resumeContentSections || []) as string[]),
+  ]);
+
+  const includeSummary = includeSet.has("Professional Summary");
+  const includeSkills = includeSet.has("Skills");
+  const includeExperience = includeSet.has("Experience");
+  const includeEducation = includeSet.has("Education");
+  const includeProjects = includeSet.has("Projects");
+  const includeCertifications = includeSet.has("Certifications");
+  const includeAchievements =
+    includeSet.has("Achievements") || includeSet.has("Key Accomplishments");
+  const includePublications = includeSet.has("Publications");
+  const includeHobbies =
+    includeSet.has("Hobbies") || includeSet.has("Hobbies & Interests");
+
+  const {
+    contact,
+    summary,
+    skills,
+    experience,
+    education,
+    projects,
+    certifications,
+    achievements,
+    publications,
+    hobbies,
+  } = resume;
 
   const sections = [
     new Paragraph({
@@ -207,7 +268,7 @@ export async function generateResumeDocx(
     }),
   ];
 
-  if (summary?.trim()) {
+  if (includeSummary && summary?.trim()) {
     sections.push(
       new Paragraph({
         text: "PROFESSIONAL SUMMARY",
@@ -231,7 +292,7 @@ export async function generateResumeDocx(
     );
   }
 
-  if (skills.length > 0) {
+  if (includeSkills && skills.length > 0) {
     sections.push(
       new Paragraph({
         text: "SKILLS",
@@ -255,7 +316,7 @@ export async function generateResumeDocx(
     );
   }
 
-  if (experience.length > 0) {
+  if (includeExperience && experience.length > 0) {
     sections.push(
       new Paragraph({
         text: "PROFESSIONAL EXPERIENCE",
@@ -314,7 +375,7 @@ export async function generateResumeDocx(
     });
   }
 
-  if (education.length > 0) {
+  if (includeEducation && education.length > 0) {
     sections.push(
       new Paragraph({
         text: "EDUCATION",
@@ -350,7 +411,7 @@ export async function generateResumeDocx(
     });
   }
 
-  if (projects && projects.length > 0) {
+  if (includeProjects && projects && projects.length > 0) {
     sections.push(
       new Paragraph({
         text: "PROJECTS",
@@ -385,13 +446,121 @@ export async function generateResumeDocx(
     });
   }
 
+  if (includeCertifications && certifications && certifications.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "CERTIFICATIONS",
+        bold: true,
+        size: 24,
+        border: {
+          bottom: {
+            color: "000000",
+            space: 1,
+            style: BorderStyle.SINGLE,
+            size: 6,
+          },
+        },
+        spacing: { after: 200 },
+      }),
+    );
+    certifications.forEach((cert) => {
+      sections.push(
+        new Paragraph({
+          text: cert,
+          size: 22,
+          spacing: { after: 100 },
+          indent: { left: 720 },
+        }),
+      );
+    });
+  }
+
+  if (includeAchievements && achievements && achievements.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "ACHIEVEMENTS",
+        bold: true,
+        size: 24,
+        border: {
+          bottom: {
+            color: "000000",
+            space: 1,
+            style: BorderStyle.SINGLE,
+            size: 6,
+          },
+        },
+        spacing: { after: 200 },
+      }),
+    );
+    achievements.forEach((ach) => {
+      sections.push(
+        new Paragraph({
+          text: ach,
+          size: 22,
+          spacing: { after: 100 },
+          indent: { left: 720 },
+        }),
+      );
+    });
+  }
+
+  if (includePublications && publications && publications.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "PUBLICATIONS",
+        bold: true,
+        size: 24,
+        border: {
+          bottom: {
+            color: "000000",
+            space: 1,
+            style: BorderStyle.SINGLE,
+            size: 6,
+          },
+        },
+        spacing: { after: 200 },
+      }),
+    );
+    publications.forEach((pub) => {
+      sections.push(
+        new Paragraph({
+          text: pub,
+          size: 22,
+          spacing: { after: 100 },
+          indent: { left: 720 },
+        }),
+      );
+    });
+  }
+
+  if (includeHobbies && hobbies && hobbies.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: "HOBBIES & INTERESTS",
+        bold: true,
+        size: 24,
+        border: {
+          bottom: {
+            color: "000000",
+            space: 1,
+            style: BorderStyle.SINGLE,
+            size: 6,
+          },
+        },
+        spacing: { after: 200 },
+      }),
+    );
+    sections.push(
+      new Paragraph({
+        text: hobbies.join(" • "),
+        size: 22,
+        spacing: { after: 200 },
+      }),
+    );
+  }
+
   const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: sections,
-      },
-    ],
+    sections: [{ properties: {}, children: sections }],
   });
 
   return await Packer.toBlob(doc);
@@ -430,8 +599,37 @@ export async function downloadResumePDF(
   try {
     const html2pdf = await loadHtml2Pdf();
 
-    const { contact, summary, skills, experience, education, projects } =
-      resume;
+    const settings =
+      (await getSettings()) || ({ resumeContentSections: [] } as any);
+    const includeSet = new Set([
+      ...DEFAULT_IMMUTABLE_SECTIONS,
+      ...((settings.resumeContentSections || []) as string[]),
+    ]);
+
+    const includeSummary = includeSet.has("Professional Summary");
+    const includeSkills = includeSet.has("Skills");
+    const includeExperience = includeSet.has("Experience");
+    const includeEducation = includeSet.has("Education");
+    const includeProjects = includeSet.has("Projects");
+    const includeCertifications = includeSet.has("Certifications");
+    const includeAchievements =
+      includeSet.has("Achievements") || includeSet.has("Key Accomplishments");
+    const includePublications = includeSet.has("Publications");
+    const includeHobbies =
+      includeSet.has("Hobbies") || includeSet.has("Hobbies & Interests");
+
+    const {
+      contact,
+      summary,
+      skills,
+      experience,
+      education,
+      projects,
+      certifications,
+      achievements,
+      publications,
+      hobbies,
+    } = resume;
 
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.45; color: #333; padding: 20px; max-width:800px; margin:0 auto;">
@@ -446,34 +644,34 @@ export async function downloadResumePDF(
         </div>
 
         ${
-          summary?.trim()
+          includeSummary && summary?.trim()
             ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Summary</h2>
-          <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${summary}</p>
-        `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Summary</h2>
+        <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${summary}</p>
+      `
             : ""
         }
 
         ${
-          skills && skills.length > 0
+          includeSkills && skills && skills.length > 0
             ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Skills</h2>
-          <p style="font-size: 11px; margin-bottom: 10px;">${skills.join(" • ")}</p>
-        `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Skills</h2>
+        <p style="font-size: 11px; margin-bottom: 10px;">${skills.join(" • ")}</p>
+      `
             : ""
         }
 
         ${
-          experience && experience.length > 0
+          includeExperience && experience && experience.length > 0
             ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Experience</h2>
-          ${experience
-            .map((exp) => {
-              const dateRange =
-                exp.endDate && !exp.isCurrentlyWorking
-                  ? `${exp.startDate} – ${exp.endDate}`
-                  : `${exp.startDate} – Present`;
-              return `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Professional Experience</h2>
+        ${experience
+          .map((exp) => {
+            const dateRange =
+              exp.endDate && !exp.isCurrentlyWorking
+                ? `${exp.startDate} – ${exp.endDate}`
+                : `${exp.startDate} – Present`;
+            return `
                 <div style="margin-bottom: 8px;">
                   <div style="font-weight: 600; font-size: 12px; margin: 0;">${exp.title}</div>
                   <div style="font-size: 11px; color: #666; margin: 2px 0;">${exp.company} | ${dateRange}</div>
@@ -487,44 +685,44 @@ export async function downloadResumePDF(
                   </ul>
                 </div>
               `;
-            })
-            .join("")}
+          })
+          .join("")}
         `
             : ""
         }
 
         ${
-          education && education.length > 0
+          includeEducation && education && education.length > 0
             ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Education</h2>
-          ${education
-            .map(
-              (edu) => `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Education</h2>
+        ${education
+          .map(
+            (edu) => `
             <div style="font-size: 11px; margin-bottom: 6px;">
               <div style="font-weight: 600; margin: 0;">${edu.degree} in ${edu.field}</div>
               <div style="color: #666; margin: 2px 0;">${edu.institution} | Graduated: ${edu.graduationDate}</div>
             </div>
           `,
-            )
-            .join("")}
+          )
+          .join("")}
         `
             : ""
         }
 
         ${
-          projects && projects.length > 0
+          includeProjects && projects && projects.length > 0
             ? `
-          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Projects</h2>
-          ${projects
-            .map(
-              (project) => `
+        <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">Projects</h2>
+        ${projects
+          .map(
+            (project) => `
             <div style="font-size: 11px; margin-bottom: 6px;">
               <div style="font-weight: 600; margin: 0;">${project.title}</div>
               <div>${project.description}</div>
             </div>
           `,
-            )
-            .join("")}
+          )
+          .join("")}
         `
             : ""
         }
