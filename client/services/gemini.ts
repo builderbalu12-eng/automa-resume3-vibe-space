@@ -449,6 +449,7 @@ export async function extractJobRequirements(
 export async function tailorResumeForJob(
   masterResume: ResumeData,
   jobDescription: JobDescription,
+  configuredSections?: string[],
 ): Promise<ResumeData> {
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -542,6 +543,39 @@ export async function tailorResumeForJob(
             )
           : masterResume.skills,
     };
+
+    // Generate custom sections if configured
+    if (configuredSections && configuredSections.length > 0) {
+      const customSections: Record<string, string> = {};
+
+      for (const section of configuredSections) {
+        const customSectionPrompt = `You are helping tailor a resume for a specific job. Generate content for the "${section}" section that highlights relevant information for this job position.
+
+        Job: ${jobDescription.title} at ${jobDescription.company}
+        Required Skills: ${jobSkills}
+
+        Resume Info:
+        - Name: ${masterResume.contact.name}
+        - Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(", ")}
+        - Skills: ${masterResume.skills.join(", ")}
+
+        Generate 2-4 bullet points or a short paragraph (200-300 characters) for the "${section}" section that is relevant to this ${jobDescription.title} position.
+
+        Return ONLY the content text, no markdown, no bullet points formatting - just the raw content.`;
+
+        try {
+          const sectionResult = await model.generateContent(customSectionPrompt);
+          const sectionText = sectionResult.response.text().trim();
+          if (sectionText && sectionText.length > 10) {
+            customSections[section] = sectionText;
+          }
+        } catch (err) {
+          console.warn(`Failed to generate "${section}" section:`, err);
+        }
+      }
+
+      tailoredResume.customSections = customSections;
+    }
 
     return tailoredResume;
   } catch (error) {
