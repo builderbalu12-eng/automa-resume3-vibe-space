@@ -555,6 +555,30 @@ Then re-enable the extension and try again.`,
                     </div>
                   )}
 
+                  {tailorState.tailored.customSections &&
+                    Object.keys(tailorState.tailored.customSections).length >
+                      0 && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-sm font-semibold text-primary mb-2">
+                          Custom Sections Generated:
+                        </p>
+                        <div className="space-y-2">
+                          {Object.entries(
+                            tailorState.tailored.customSections,
+                          ).map(([sectionName, content]) => (
+                            <div key={sectionName} className="text-xs">
+                              <p className="font-medium text-foreground">
+                                {sectionName}
+                              </p>
+                              <p className="text-muted-foreground line-clamp-2">
+                                {content}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   <div className="flex gap-3">
                     <button
                       onClick={handleDownload}
