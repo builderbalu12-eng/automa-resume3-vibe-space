@@ -763,72 +763,35 @@ export async function analyzeJobAndTailorResume(
     2,
   );
 
-  const prompt = `You are an expert resume optimizer and job analyst.
-
-TASK:
-1. Extract job posting details from the page content
-2. Tailor the provided resume for this specific job
-3. Calculate ATS match score
-
-PAGE CONTENT (job posting):
-${cleanHTML}
-
-MASTER RESUME:
-${resumeText}
-
-INSTRUCTIONS:
-1. EXTRACT JOB DETAILS from the page content:
-   - Find job title (exact position name)
-   - Find company name
-   - Find location if available
-   - Extract key responsibilities and requirements
-   - Extract required technical skills
-   - Extract years of experience required if mentioned
-
-2. TAILOR THE RESUME:
-   - Rewrite professional summary to highlight most relevant experience for THIS job
-   - Reorder experience entries by relevance to job requirements
-   - Rewrite 3-4 bullet points for each relevant job position to match job keywords
-   - Reorder skills list to prioritize job-required skills first
-   - Maintain ATS-friendly formatting (no special characters, standard text)
-   - Keep quantifiable achievements that are relevant to this job
-
-3. CALCULATE ATS SCORE:
-   - Rate how well the tailored resume matches the job (0-100)
-   - Identify which keywords/skills matched
-   - List missing important keywords
-   - Suggest improvements
-
-4. CREATE SUMMARY:
-   - Write a short 2-3 sentence summary of the job and match
-
-Return ONLY valid JSON (no markdown, no explanations):
+  const prompt = `Extract job details and tailor resume. Return valid JSON:
 {
-  "jobTitle": "extracted job title",
-  "company": "extracted company name",
+  "jobTitle": "title",
+  "company": "company",
   "location": "location or 'Not specified'",
-  "jobDescription": "comprehensive job description combining responsibilities and requirements",
-  "requirements": ["requirement 1", "requirement 2", ...],
-  "skills": ["skill 1", "skill 2", ...],
-  "tailoredSummary": "2-3 sentence professional summary tailored for this job",
-  "tailoredExperience": [
-    {"position": "exact job title from resume", "newBullets": ["bullet 1", "bullet 2", "bullet 3"]},
-    ...
-  ],
-  "tailoredSkillsOrder": ["most relevant skill", "skill 2", ...],
-  "atsScore": number between 0-100,
-  "atsMatchPercentage": number between 0-100,
-  "matchedKeywords": ["keyword 1", "keyword 2", ...],
-  "missingKeywords": ["missing keyword 1", ...],
-  "improvements": ["improvement 1", "improvement 2", ...],
-  "jobSummary": "2-3 sentence summary of the job and how well the resume matches"
-}`;
+  "jobDescription": "description from page",
+  "requirements": ["requirement1"],
+  "skills": ["skill1"],
+  "tailoredSummary": "summary for this job",
+  "tailoredExperience": [{"position": "job title", "newBullets": ["bullet1", "bullet2"]}],
+  "tailoredSkillsOrder": ["skill1", "skill2"],
+  "atsScore": 0-100,
+  "atsMatchPercentage": 0-100,
+  "matchedKeywords": ["keyword1"],
+  "missingKeywords": ["keyword1"],
+  "improvements": ["improvement1"],
+  "jobSummary": "summary"
+}
+
+Job posting: ${cleanHTML}
+Resume: ${resumeText}`;
 
   try {
     console.log("[Gemini] Analyzing job and tailoring resume...");
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    });
 
     console.log("[Gemini] Response received, parsing...");
 
