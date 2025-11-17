@@ -128,7 +128,7 @@ async function loadMasterResume(): Promise<ResumeData | null> {
     // Try 2: Get from localhost tab if available
     resume = await getResumeFromLocalhost();
     if (resume) {
-      console.log("[Popup] ��� Resume found on localhost:", resume.contact?.name);
+      console.log("[Popup] ✓ Resume found on localhost:", resume.contact?.name);
       state.masterResume = resume;
 
       // Save to chrome.storage for future use
@@ -551,6 +551,22 @@ if (downloadBtn) {
 if (customAnalyseBtn) {
   customAnalyseBtn.addEventListener("click", async () => {
     try {
+      // Check if Gemini API key is configured BEFORE starting
+      const hasApiKey = await hasGeminiApiKey();
+      if (!hasApiKey) {
+        if (errorEl) {
+          errorEl.classList.remove("hidden");
+          errorEl.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 8px;">⚠️ API Key Required</div>
+            <div>${getMissingApiKeyMessage()}</div>
+            <div style="margin-top: 8px; font-size: 11px; opacity: 0.9;">
+              Click "Open Dashboard" to configure your Gemini API key.
+            </div>
+          `;
+        }
+        return;
+      }
+
       if (customAnalyseBtn) {
         customAnalyseBtn.disabled = true;
         customAnalyseBtn.textContent = "⏳ Analyzing current page...";
@@ -626,7 +642,30 @@ if (customAnalyseBtn) {
       console.error("[Popup] CustomAnalyse error:", error);
       if (errorEl) {
         errorEl.classList.remove("hidden");
-        errorEl.textContent = `✗ Error: ${error instanceof Error ? error.message : "Unknown error"}`;
+
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
+
+        // Handle "Extension context invalidated" error with clear explanation
+        if (
+          errorMsg.includes("Extension context invalidated") ||
+          errorMsg.includes("context invalidated")
+        ) {
+          errorEl.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 8px;">⚠️ Extension Context Lost</div>
+            <div style="margin-bottom: 8px;">The extension needs to be reinitialized. This can happen when:</div>
+            <ul style="margin: 8px 0 8px 20px; font-size: 11px;">
+              <li>The extension is updated or reloaded</li>
+              <li>The extension was disabled and re-enabled</li>
+              <li>Your browser was updated</li>
+            </ul>
+            <div style="margin-top: 8px; font-size: 11px;">
+              <strong>Fix:</strong> Close this popup and click the extension icon again.
+            </div>
+          `;
+        } else {
+          errorEl.textContent = `✗ Error: ${errorMsg}`;
+        }
       }
     } finally {
       if (customAnalyseBtn) {
