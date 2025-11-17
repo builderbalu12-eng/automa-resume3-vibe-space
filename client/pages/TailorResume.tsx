@@ -60,20 +60,65 @@ export const TailorResume: React.FC = () => {
     loadResume();
   }, [navigate]);
 
+  const checkMissingContentSections = (
+    tailored: ResumeData,
+    configuredSections: string[]
+  ): string[] => {
+    const missing: string[] = [];
+
+    for (const section of configuredSections) {
+      const sectionKey = section.charAt(0).toLowerCase() + section.slice(1).replace(/ /g, "");
+      const sectionValue = (tailored as any)[sectionKey];
+
+      // Check if section exists and has meaningful content
+      let isEmpty = false;
+
+      if (!sectionValue) {
+        isEmpty = true;
+      } else if (Array.isArray(sectionValue)) {
+        // For arrays, check if they're empty or have only empty strings
+        isEmpty =
+          sectionValue.length === 0 ||
+          sectionValue.every((item: any) => {
+            if (typeof item === "string") return item.trim().length < 20;
+            return false;
+          });
+      } else if (typeof sectionValue === "string") {
+        // For strings, check if less than 20 characters or contains placeholder text
+        isEmpty =
+          sectionValue.trim().length < 20 ||
+          sectionValue.includes("N/A") ||
+          sectionValue.includes("Not available") ||
+          sectionValue.includes("Not applicable");
+      }
+
+      if (isEmpty) {
+        missing.push(section);
+      }
+    }
+
+    return missing;
+  };
+
   const handleTailor = async () => {
     if (!masterResume || !jobDescription.trim()) {
       setError("Please enter a job description");
       return;
     }
 
+    // Validate API key first
     if (!hasApiKey) {
-      setError("Please configure Gemini API key in Settings (⚙️ button) first");
+      setError(
+        "⚠️ API Key Required. Please configure your Gemini API key in Settings before analyzing resumes."
+      );
+      setShowSettings(true);
       return;
     }
 
     setIsTailoring(true);
     setError(null);
     setSuccess(null);
+    setMissingContentSections([]);
 
     try {
       // Extract job requirements from JD
@@ -85,17 +130,45 @@ export const TailorResume: React.FC = () => {
       // Calculate ATS score
       const atsData = await calculateATSScore(tailored, extracted);
 
+      // Check for missing sections if configured sections exist
+      const appSettings = await getSettings();
+      const configuredSections = appSettings?.resumeContentSections || [];
+      const missing = checkMissingContentSections(tailored, configuredSections);
+
       setTailorState({
         tailored,
         atsScore: atsData.score,
         jobData: extracted,
       });
 
+      setMissingContentSections(missing);
       setSuccess(`✓ Resume tailored! ATS Score: ${atsData.score}%`);
     } catch (err) {
-      setError(
-        `Failed to tailor resume: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
+      // Handle extension context invalidation error
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (
+        errorMessage.includes("Extension context invalidated") ||
+        errorMessage.includes("chrome.runtime.lastError")
+      ) {
+        setError(
+          `⚠️ Extension was reloaded.
+
+Please try one of the following:
+1. Refresh this page and try again
+2. Clear cookies and site data:
+   - Click the lock icon (or site info icon) on the left side of the address bar
+   - Click "Cookies and site data"
+   - Click "Remove" or "Clear"
+   - Refresh the page
+
+Then re-enable the extension and try again.`
+        );
+      } else {
+        setError(
+          `Failed to tailor resume: ${errorMessage || "Unknown error"}`,
+        );
+      }
     } finally {
       setIsTailoring(false);
     }
