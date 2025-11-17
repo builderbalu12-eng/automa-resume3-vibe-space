@@ -275,6 +275,13 @@ export const UploadResume: React.FC = () => {
           <ResumeUpload
             onUploadSuccess={handleUploadSuccess}
             isLoading={isLoading}
+            onApiKeyMissing={() => setShowSettings(true)}
+          />
+
+          {/* Settings Modal */}
+          <Settings
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
           />
 
           {error && (
