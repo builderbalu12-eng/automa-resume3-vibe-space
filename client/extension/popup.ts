@@ -48,6 +48,9 @@ const dashboardLink = document.getElementById(
 const customAnalyseBtn = document.getElementById(
   "custom-analyse-btn",
 ) as HTMLButtonElement | null;
+const openDashboardBtn = document.getElementById(
+  "open-dashboard-btn",
+) as HTMLButtonElement | null;
 
 console.log("[Popup] DOM elements found:", {
   statusEl: !!statusEl,
@@ -58,6 +61,7 @@ console.log("[Popup] DOM elements found:", {
   buttonsEl: !!buttonsEl,
   tailorBtn: !!tailorBtn,
   downloadBtn: !!downloadBtn,
+  openDashboardBtn: !!openDashboardBtn,
 });
 
 // Helper to get resume from localhost tabs
