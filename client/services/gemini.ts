@@ -642,28 +642,24 @@ export async function calculateATSScore(
     `Description: ${jobDescription.description ? jobDescription.description.substring(0, 500) : ""}`,
   ].join("\n");
 
-  const prompt = `Analyze how well this resume matches the job posting for ATS (Applicant Tracking System) screening.
+  const prompt = `Rate resume for ${jobDescription.title} at ${jobDescription.company}:
+Resume: ${resumeText.substring(0, 500)}
+Job: ${jobText}
 
-  RESUME:
-  ${resumeText}
-
-  JOB POSTING:
-  ${jobText}
-
-  Evaluate the match and return ONLY a valid JSON object (no markdown):
-  {
-    "score": number between 0-100 (how likely ATS will rank it high),
-    "matchPercentage": number between 0-100 (percentage of job requirements matched),
-    "matchedKeywords": ["keyword matched 1", "keyword matched 2", "keyword matched 3"],
-    "missingKeywords": ["important missing keyword 1", "missing keyword 2"],
-    "improvements": ["specific improvement 1", "specific improvement 2", "specific improvement 3"]
-  }
-
-  Be honest and practical in your assessment.`;
+Return ONLY valid JSON:
+{
+  "score": 0-100,
+  "matchPercentage": 0-100,
+  "matchedKeywords": ["keyword1", "keyword2"],
+  "missingKeywords": ["keyword1"],
+  "improvements": ["improvement1"]
+}`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    });
 
     console.log("ATS Score response received, length:", text.length);
 
