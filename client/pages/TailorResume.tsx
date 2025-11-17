@@ -254,6 +254,12 @@ Then re-enable the extension and try again.`
 
   return (
     <div className="min-h-screen bg-background py-12">
+      {/* Settings Modal */}
+      <Settings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
       <div className="max-w-6xl mx-auto px-4">
         <button
           onClick={() => navigate("/")}
