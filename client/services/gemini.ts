@@ -564,7 +564,8 @@ export async function tailorResumeForJob(
         Return ONLY the content text, no markdown, no bullet points formatting - just the raw content.`;
 
         try {
-          const sectionResult = await model.generateContent(customSectionPrompt);
+          const sectionResult =
+            await model.generateContent(customSectionPrompt);
           const sectionText = sectionResult.response.text().trim();
           if (sectionText && sectionText.length > 10) {
             customSections[section] = sectionText;

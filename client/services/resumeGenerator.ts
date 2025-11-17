@@ -400,7 +400,9 @@ export async function generateResumeDocx(
   }
 
   if (resume.customSections && Object.keys(resume.customSections).length > 0) {
-    for (const [sectionName, sectionContent] of Object.entries(resume.customSections)) {
+    for (const [sectionName, sectionContent] of Object.entries(
+      resume.customSections,
+    )) {
       if (sectionContent && sectionContent.trim()) {
         sections.push(
           new Paragraph({

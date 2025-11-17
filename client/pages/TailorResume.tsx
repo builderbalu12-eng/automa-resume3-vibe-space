@@ -136,7 +136,11 @@ export const TailorResume: React.FC = () => {
       const configuredSections = appSettings?.resumeContentSections || [];
 
       // Tailor the resume with configured sections
-      const tailored = await tailorResumeForJob(masterResume, extracted, configuredSections);
+      const tailored = await tailorResumeForJob(
+        masterResume,
+        extracted,
+        configuredSections,
+      );
 
       // Calculate ATS score
       const atsData = await calculateATSScore(tailored, extracted);
