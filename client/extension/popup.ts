@@ -680,6 +680,20 @@ if (customAnalyseBtn) {
   });
 }
 
+// Handle "Open Dashboard" button
+if (openDashboardBtn) {
+  openDashboardBtn.addEventListener("click", () => {
+    try {
+      console.log("[Popup] Opening dashboard...");
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("../index.html"),
+      });
+    } catch (e) {
+      console.error("[Popup] Error opening dashboard:", e);
+    }
+  });
+}
+
 // Start initialization when popup opens
 console.log("[Popup] Starting initialization...");
 init();
