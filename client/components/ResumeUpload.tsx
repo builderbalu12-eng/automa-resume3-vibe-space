@@ -178,7 +178,7 @@ Then re-enable the extension and try again.`
                   Upload Your Master Resume
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Drag and drop your resume or click to browse (DOCX format)
+                  Drag and drop your resume or click to browse (.docx, .txt, or .pdf)
                 </p>
               </div>
             </>
