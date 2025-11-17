@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { ResumeData, JobDescription } from "@/types";
-import { getMasterResume, getApiKeyFromSettings } from "@/utils/storage";
+import { getMasterResume, getApiKeyFromSettings, getSettings } from "@/utils/storage";
+import { Settings } from "@/components/Settings";
 import {
   tailorResumeForJob,
   calculateATSScore,
