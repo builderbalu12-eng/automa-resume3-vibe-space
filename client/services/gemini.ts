@@ -22,23 +22,43 @@ if (
 
 let client: GoogleGenerativeAI | null = null;
 
-async function initGemini(): Promise<GoogleGenerativeAI> {
-  if (client) return client;
+function handleExtensionContextError(error: any): Error {
+  const errorMessage = error?.message || String(error);
 
-  // Try to get API key from localStorage first
-  let apiKey = GEMINI_API_KEY;
-  if (!apiKey) {
-    apiKey = await getApiKeyFromSettings();
-  }
-
-  if (!apiKey) {
-    throw new Error(
-      "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).",
+  if (
+    errorMessage.includes("Extension context invalidated") ||
+    errorMessage.includes("chrome.runtime.lastError") ||
+    errorMessage.includes("context invalidated")
+  ) {
+    return new Error(
+      `Extension context invalidated error: ${errorMessage}. Please refresh the page and try again.`
     );
   }
 
-  client = new GoogleGenerativeAI(apiKey);
-  return client;
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+async function initGemini(): Promise<GoogleGenerativeAI> {
+  if (client) return client;
+
+  try {
+    // Try to get API key from localStorage first
+    let apiKey = GEMINI_API_KEY;
+    if (!apiKey) {
+      apiKey = await getApiKeyFromSettings();
+    }
+
+    if (!apiKey) {
+      throw new Error(
+        "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).",
+      );
+    }
+
+    client = new GoogleGenerativeAI(apiKey);
+    return client;
+  } catch (error) {
+    throw handleExtensionContextError(error);
+  }
 }
 
 export interface TailoredResumeResult {
