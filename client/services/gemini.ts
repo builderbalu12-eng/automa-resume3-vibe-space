@@ -502,50 +502,34 @@ export async function tailorResumeForJob(
       ? jobDescription.description.substring(0, 300)
       : "");
 
-  const prompt = `You are an expert resume optimizer. Tailor this resume to match this specific job posting.
+  const prompt = `Tailor this resume for the job: ${jobDescription.title} at ${jobDescription.company}
+Skills needed: ${jobSkills}
+Requirements: ${jobRequirements}
 
-  TARGET JOB:
-  - Title: ${jobDescription.title}
-  - Company: ${jobDescription.company}
-  - Required Skills: ${jobSkills}
-  - Requirements: ${jobRequirements}
+Resume:
+Name: ${masterResume.contact.name}
+Skills: ${masterResume.skills.join(", ")}
+Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
 
-  ORIGINAL RESUME:
-  - Name: ${masterResume.contact.name}
-  - Summary: ${masterResume.summary || "Professional with relevant experience"}
-  - All Skills: ${masterResume.skills.join(", ")}
-
-  - Experience:
-  ${masterResume.experience.map((e, i) => `${i + 1}. ${e.title} at ${e.company} (${e.startDate}${e.endDate ? ` - ${e.endDate}` : ""}): ${e.description.join(" ")}`).join("\n\n")}
-
-  TASK: Create a tailored version that:
-  1. Rewrites the professional summary to highlight relevant experience for THIS job
-  2. Reorders and rewrites experience bullets to emphasize skills matching the job
-  3. Uses keywords from the job description naturally
-  4. Maintains ATS-friendly formatting (standard keywords, no special characters)
-  5. Keeps achievements and quantifiable results that are relevant
-
-  Return ONLY a valid JSON object (no markdown, no code blocks):
-  {
-    "tailoredSummary": "2-3 sentence professional summary tailored for this specific job, highlighting most relevant experience",
-    "tailoredExperience": [
-      {"jobTitle": "job title from original resume", "newBullets": ["tailored bullet point 1", "tailored bullet point 2", "tailored bullet point 3"]},
-      {"jobTitle": "another job title", "newBullets": ["bullet 1", "bullet 2"]}
-    ],
-    "recommendedSkillsOrder": ["most relevant skill 1", "relevant skill 2", "skill 3"]
-  }`;
+Return ONLY valid JSON:
+{
+  "tailoredSummary": "2-3 sentence summary for this job",
+  "tailoredExperience": [{"jobTitle": "original title", "newBullets": ["bullet1", "bullet2"]}],
+  "recommendedSkillsOrder": ["skill1", "skill2"]
+}`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-
-    console.log("Tailor response received, length:", text.length);
+    // Main tailor prompt with retry logic
+    const mainResult = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    });
 
     let parsed;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(mainResult);
     } catch (e) {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonMatch = mainResult.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]);
       } else {
@@ -577,44 +561,55 @@ export async function tailorResumeForJob(
           : masterResume.skills,
     };
 
-    // Generate custom sections if configured
+    // Generate all custom sections in ONE API call (batch) instead of multiple calls
     if (configuredSections && configuredSections.length > 0) {
-      const customSections: Record<string, string> = {};
+      const customSectionsList = configuredSections.join('", "');
+      const customSectionsPrompt = `Generate content for these resume sections for a ${jobDescription.title} position requiring: ${jobSkills}
 
-      for (const section of configuredSections) {
-        const customSectionPrompt = `You are helping tailor a resume for a specific job. Generate content for the "${section}" section that highlights relevant information for this job position.
+Resume: ${masterResume.contact.name}, Experience: ${masterResume.experience.map((e) => e.title).join(", ")}, Skills: ${masterResume.skills.join(", ")}
 
-        Job: ${jobDescription.title} at ${jobDescription.company}
-        Required Skills: ${jobSkills}
+Return ONLY valid JSON:
+{
+  "sections": {
+    "${customSectionsList}": "200-300 char content relevant to the ${jobDescription.title} job"
+  }
+}`;
 
-        Resume Info:
-        - Name: ${masterResume.contact.name}
-        - Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(", ")}
-        - Skills: ${masterResume.skills.join(", ")}
+      try {
+        const customResult = await retryWithBackoff(async () => {
+          const result = await model.generateContent(customSectionsPrompt);
+          return result.response.text().trim();
+        });
 
-        Generate 2-4 bullet points or a short paragraph (200-300 characters) for the "${section}" section that is relevant to this ${jobDescription.title} position.
-
-        Return ONLY the content text, no markdown, no bullet points formatting - just the raw content.`;
-
+        let customParsed;
         try {
-          const sectionResult =
-            await model.generateContent(customSectionPrompt);
-          const sectionText = sectionResult.response.text().trim();
-          if (sectionText && sectionText.length > 10) {
-            customSections[section] = sectionText;
+          customParsed = JSON.parse(customResult);
+        } catch (e) {
+          const jsonMatch = customResult.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            customParsed = JSON.parse(jsonMatch[0]);
           }
-        } catch (err) {
-          console.warn(`Failed to generate "${section}" section:`, err);
         }
-      }
 
-      tailoredResume.customSections = customSections;
+        if (customParsed?.sections) {
+          const customSections: Record<string, string> = {};
+          for (const [sectionName, content] of Object.entries(
+            customParsed.sections,
+          )) {
+            if (content && String(content).length > 10) {
+              customSections[sectionName] = String(content);
+            }
+          }
+          tailoredResume.customSections = customSections;
+        }
+      } catch (err) {
+        console.warn("Failed to generate custom sections:", err);
+      }
     }
 
     return tailoredResume;
   } catch (error) {
     console.error("Error tailoring resume:", error);
-    // Return original resume if tailoring fails
     return masterResume;
   }
 }
