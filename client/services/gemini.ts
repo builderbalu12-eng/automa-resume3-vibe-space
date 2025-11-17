@@ -565,15 +565,18 @@ Return ONLY valid JSON:
 
     // Generate all custom sections in ONE API call (batch) instead of multiple calls
     if (configuredSections && configuredSections.length > 0) {
-      const customSectionsList = configuredSections.join('", "');
-      const customSectionsPrompt = `Generate content for these resume sections for a ${jobDescription.title} position requiring: ${jobSkills}
+      const sectionsTemplate = configuredSections
+        .map((section) => `"${section}": "3-4 sentences relevant to ${jobDescription.title}"`)
+        .join(", ");
 
-Resume: ${masterResume.contact.name}, Experience: ${masterResume.experience.map((e) => e.title).join(", ")}, Skills: ${masterResume.skills.join(", ")}
+      const customSectionsPrompt = `Generate resume content for: ${jobDescription.title} at ${jobDescription.company}
+Skills needed: ${jobSkills}
+Resume person: ${masterResume.contact.name} with experience in ${masterResume.experience.map((e) => e.title).join(", ")}
 
-Return ONLY valid JSON:
+Return ONLY valid JSON with 3-4 sentence content for each section:
 {
   "sections": {
-    "${customSectionsList}": "200-300 char content relevant to the ${jobDescription.title} job"
+    ${sectionsTemplate}
   }
 }`;
 
@@ -598,11 +601,14 @@ Return ONLY valid JSON:
           for (const [sectionName, content] of Object.entries(
             customParsed.sections,
           )) {
-            if (content && String(content).length > 10) {
-              customSections[sectionName] = String(content);
+            const contentStr = String(content).trim();
+            if (contentStr && contentStr.length > 0 && contentStr !== "null") {
+              customSections[sectionName] = contentStr;
             }
           }
-          tailoredResume.customSections = customSections;
+          if (Object.keys(customSections).length > 0) {
+            tailoredResume.customSections = customSections;
+          }
         }
       } catch (err) {
         console.warn("Failed to generate custom sections:", err);
