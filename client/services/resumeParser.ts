@@ -115,16 +115,18 @@ async function parseWithGemini(
       parts = [{ text: prompt }];
     }
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: parts,
-        },
-      ],
+    const responseText = await retryWithBackoff(async () => {
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: parts,
+          },
+        ],
+      });
+      return result.response.text();
     });
 
-    const responseText = result.response.text();
     console.log(
       "[Gemini] Parse response received, length:",
       responseText.length,
