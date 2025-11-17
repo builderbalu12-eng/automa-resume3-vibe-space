@@ -131,15 +131,17 @@ export const TailorResume: React.FC = () => {
       // Extract job requirements from JD
       const extracted = await extractJobRequirements(jobDescription);
 
-      // Tailor the resume
-      const tailored = await tailorResumeForJob(masterResume, extracted);
+      // Get configured sections from settings
+      const appSettings = await getSettings();
+      const configuredSections = appSettings?.resumeContentSections || [];
+
+      // Tailor the resume with configured sections
+      const tailored = await tailorResumeForJob(masterResume, extracted, configuredSections);
 
       // Calculate ATS score
       const atsData = await calculateATSScore(tailored, extracted);
 
       // Check for missing sections if configured sections exist
-      const appSettings = await getSettings();
-      const configuredSections = appSettings?.resumeContentSections || [];
       const missing = checkMissingContentSections(tailored, configuredSections);
 
       setTailorState({
@@ -517,7 +519,7 @@ Then re-enable the extension and try again.`,
                     Tailoring...
                   </>
                 ) : (
-                  <>⚡ Tailor Resume</>
+                  <>�� Tailor Resume</>
                 )}
               </button>
             </div>
