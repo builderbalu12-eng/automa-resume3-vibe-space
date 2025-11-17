@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { ResumeUpload } from "@/components/ResumeUpload";
+import { Settings } from "@/components/Settings";
 import { ResumeData } from "@/types";
 import { setMasterResume, setUserId } from "@/utils/storage";
 import { saveResume } from "@/services/mongodb";
