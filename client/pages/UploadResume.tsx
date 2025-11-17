@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { ResumeUpload } from "@/components/ResumeUpload";
+import { Settings } from "@/components/Settings";
 import { ResumeData } from "@/types";
 import { setMasterResume, setUserId } from "@/utils/storage";
 import { saveResume } from "@/services/mongodb";
@@ -11,6 +12,7 @@ export const UploadResume: React.FC = () => {
   const [resume, setResume] = useState<ResumeData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleUploadSuccess = async (uploadedResume: ResumeData) => {
     setIsLoading(true);
@@ -273,6 +275,13 @@ export const UploadResume: React.FC = () => {
           <ResumeUpload
             onUploadSuccess={handleUploadSuccess}
             isLoading={isLoading}
+            onApiKeyMissing={() => setShowSettings(true)}
+          />
+
+          {/* Settings Modal */}
+          <Settings
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
           />
 
           {error && (

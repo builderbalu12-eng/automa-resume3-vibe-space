@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { ResumeData, JobDescription } from "@/types";
-import { getMasterResume, getApiKeyFromSettings } from "@/utils/storage";
+import {
+  getMasterResume,
+  getApiKeyFromSettings,
+  getSettings,
+} from "@/utils/storage";
+import { Settings } from "@/components/Settings";
 import {
   tailorResumeForJob,
   calculateATSScore,
@@ -21,6 +26,10 @@ export const TailorResume: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [missingContentSections, setMissingContentSections] = useState<
+    string[]
+  >([]);
 
   const [tailorState, setTailorState] = useState<{
     tailored: ResumeData | null;
@@ -57,20 +66,66 @@ export const TailorResume: React.FC = () => {
     loadResume();
   }, [navigate]);
 
+  const checkMissingContentSections = (
+    tailored: ResumeData,
+    configuredSections: string[],
+  ): string[] => {
+    const missing: string[] = [];
+
+    for (const section of configuredSections) {
+      const sectionKey =
+        section.charAt(0).toLowerCase() + section.slice(1).replace(/ /g, "");
+      const sectionValue = (tailored as any)[sectionKey];
+
+      // Check if section exists and has meaningful content
+      let isEmpty = false;
+
+      if (!sectionValue) {
+        isEmpty = true;
+      } else if (Array.isArray(sectionValue)) {
+        // For arrays, check if they're empty or have only empty strings
+        isEmpty =
+          sectionValue.length === 0 ||
+          sectionValue.every((item: any) => {
+            if (typeof item === "string") return item.trim().length < 20;
+            return false;
+          });
+      } else if (typeof sectionValue === "string") {
+        // For strings, check if less than 20 characters or contains placeholder text
+        isEmpty =
+          sectionValue.trim().length < 20 ||
+          sectionValue.includes("N/A") ||
+          sectionValue.includes("Not available") ||
+          sectionValue.includes("Not applicable");
+      }
+
+      if (isEmpty) {
+        missing.push(section);
+      }
+    }
+
+    return missing;
+  };
+
   const handleTailor = async () => {
     if (!masterResume || !jobDescription.trim()) {
       setError("Please enter a job description");
       return;
     }
 
+    // Validate API key first
     if (!hasApiKey) {
-      setError("Please configure Gemini API key in Settings (⚙️ button) first");
+      setError(
+        "⚠️ API Key Required. Please configure your Gemini API key in Settings before analyzing resumes.",
+      );
+      setShowSettings(true);
       return;
     }
 
     setIsTailoring(true);
     setError(null);
     setSuccess(null);
+    setMissingContentSections([]);
 
     try {
       // Extract job requirements from JD
@@ -82,17 +137,43 @@ export const TailorResume: React.FC = () => {
       // Calculate ATS score
       const atsData = await calculateATSScore(tailored, extracted);
 
+      // Check for missing sections if configured sections exist
+      const appSettings = await getSettings();
+      const configuredSections = appSettings?.resumeContentSections || [];
+      const missing = checkMissingContentSections(tailored, configuredSections);
+
       setTailorState({
         tailored,
         atsScore: atsData.score,
         jobData: extracted,
       });
 
+      setMissingContentSections(missing);
       setSuccess(`✓ Resume tailored! ATS Score: ${atsData.score}%`);
     } catch (err) {
-      setError(
-        `Failed to tailor resume: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
+      // Handle extension context invalidation error
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (
+        errorMessage.includes("Extension context invalidated") ||
+        errorMessage.includes("chrome.runtime.lastError")
+      ) {
+        setError(
+          `⚠️ Extension was reloaded.
+
+Please try one of the following:
+1. Refresh this page and try again
+2. Clear cookies and site data:
+   - Click the lock icon (or site info icon) on the left side of the address bar
+   - Click "Cookies and site data"
+   - Click "Remove" or "Clear"
+   - Refresh the page
+
+Then re-enable the extension and try again.`,
+        );
+      } else {
+        setError(`Failed to tailor resume: ${errorMessage || "Unknown error"}`);
+      }
     } finally {
       setIsTailoring(false);
     }
@@ -178,6 +259,9 @@ export const TailorResume: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background py-12">
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
       <div className="max-w-6xl mx-auto px-4">
         <button
           onClick={() => navigate("/")}
@@ -489,11 +573,57 @@ export const TailorResume: React.FC = () => {
                       });
                       setJobDescription("");
                       setSuccess(null);
+                      setMissingContentSections([]);
                     }}
                     className="w-full px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors font-medium"
                   >
                     ⚡ Tailor Another
                   </button>
+
+                  {/* Missing Content Sections Warning */}
+                  {missingContentSections.length > 0 && (
+                    <div
+                      className="missing-sections-warning"
+                      style={{
+                        background: "#fff3cd",
+                        borderLeft: "4px solid #ffc107",
+                        padding: "12px",
+                        marginTop: "16px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <strong style={{ color: "#856404" }}>
+                        ⚠️ Some sections could not be processed:
+                      </strong>
+                      <ul
+                        style={{
+                          margin: "8px 0",
+                          paddingLeft: "20px",
+                          color: "#856404",
+                        }}
+                      >
+                        {missingContentSections.map((section) => (
+                          <li key={section}>
+                            <strong>{section}:</strong> Not enough content in
+                            your master resume
+                          </li>
+                        ))}
+                      </ul>
+                      <p
+                        style={{
+                          marginTop: "8px",
+                          fontSize: "0.9em",
+                          color: "#856404",
+                        }}
+                      >
+                        💡{" "}
+                        <em>
+                          To include these sections, please update your master
+                          resume with relevant content and re-upload.
+                        </em>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

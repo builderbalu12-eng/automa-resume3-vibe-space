@@ -1,30 +1,64 @@
 import React, { useState } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
-import { parseDocxFile, validateResume } from "@/services/resumeParser";
+import { parseFile, validateResume } from "@/services/resumeParser";
 import { ResumeData } from "@/types";
+import { getApiKeyFromSettings } from "@/utils/storage";
 
 interface ResumeUploadProps {
   onUploadSuccess: (resume: ResumeData) => void;
   isLoading?: boolean;
+  onApiKeyMissing?: () => void;
 }
 
 export const ResumeUpload: React.FC<ResumeUploadProps> = ({
   onUploadSuccess,
   isLoading = false,
+  onApiKeyMissing,
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFile = async (file: File) => {
-    if (!file.name.endsWith(".docx")) {
-      setError("Please upload a .docx file");
-      return;
-    }
-
+  const validateApiKey = async (): Promise<boolean> => {
     try {
+      const apiKey = await getApiKeyFromSettings();
+      if (!apiKey || apiKey.trim().length === 0) {
+        setError(
+          "⚠️ API Key Required. Please configure your Gemini API key in Settings before uploading your resume.",
+        );
+        if (onApiKeyMissing) {
+          onApiKeyMissing();
+        }
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Error validating API key:", err);
+      setError("Failed to validate API key. Please try again.");
+      return false;
+    }
+  };
+
+  const handleFile = async (file: File) => {
+    try {
+      // Validate API key first
+      const hasApiKey = await validateApiKey();
+      if (!hasApiKey) {
+        return;
+      }
+
+      const validExtensions = [".docx", ".txt", ".pdf"];
+      const hasValidExtension = validExtensions.some((ext) =>
+        file.name.toLowerCase().endsWith(ext),
+      );
+
+      if (!hasValidExtension) {
+        setError("Please upload a .docx, .txt, or .pdf file");
+        return;
+      }
+
       setError(null);
-      const resume = await parseDocxFile(file);
+      const resume = await parseFile(file);
       const validation = validateResume(resume);
 
       if (!validation.isValid) {
@@ -34,7 +68,31 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
 
       onUploadSuccess(resume);
     } catch (err) {
-      setError("Failed to parse resume. Please try another file.");
+      // Handle extension context invalidation error
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (
+        errorMessage.includes("Extension context invalidated") ||
+        errorMessage.includes("chrome.runtime.lastError")
+      ) {
+        setError(
+          `⚠️ Extension was reloaded.
+
+Please try one of the following:
+1. Refresh this page and try again
+2. Clear cookies and site data:
+   - Click the lock icon (or site info icon) on the left side of the address bar
+   - Click "Cookies and site data"
+   - Click "Remove" or "Clear"
+   - Refresh the page
+
+Then re-enable the extension and try again.`,
+        );
+      } else {
+        setError(
+          errorMessage || "Failed to parse resume. Please try another file.",
+        );
+      }
       console.error("Resume parsing error:", err);
     }
   };
@@ -71,7 +129,7 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".docx"
+        accept=".docx,.txt,.pdf"
         onChange={handleChange}
         className="hidden"
         disabled={isLoading}
@@ -102,10 +160,10 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
               </div>
               <div className="text-center">
                 <h3 className="font-semibold text-lg text-primary">
-                  Parsing Resume...
+                  Uploading and processing your resume...
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Extracting and analyzing your resume content
+                  Extracting and analyzing all sections of your resume
                 </p>
                 <div className="mt-4 w-48 h-2 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-primary animate-pulse" />
@@ -122,7 +180,8 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
                   Upload Your Master Resume
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Drag and drop your resume or click to browse (DOCX format)
+                  Drag and drop your resume or click to browse (.docx, .txt, or
+                  .pdf)
                 </p>
               </div>
             </>
