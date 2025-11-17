@@ -446,22 +446,24 @@ export async function extractJobRequirements(
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  const prompt = `Extract structured information from this job description. Return JSON with this format:
-  {
-    "title": "job title",
-    "company": "company name",
-    "location": "location",
-    "requirements": ["requirement 1", "requirement 2", ...],
-    "skills": ["skill 1", "skill 2", ...]
-  }
-  
-  Job Description:
-  ${jobDescription}`;
+  const prompt = `Extract job info from this description:
+${jobDescription}
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+Return ONLY valid JSON:
+{
+  "title": "job title",
+  "company": "company name",
+  "location": "location",
+  "requirements": ["requirement1", "requirement2"],
+  "skills": ["skill1", "skill2"]
+}`;
 
   try {
+    const text = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    });
+
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
