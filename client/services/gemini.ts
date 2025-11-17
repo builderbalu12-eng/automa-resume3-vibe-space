@@ -3,7 +3,7 @@ import { ResumeData, JobDescription, ATSScore } from "@/types";
 import { getApiKeyFromSettings } from "@/utils/storage";
 
 // Retry utility with exponential backoff
-async function retryWithBackoff<T>(
+export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxAttempts: number = 3,
   initialDelayMs: number = 1000,
