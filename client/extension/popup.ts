@@ -146,6 +146,35 @@ async function loadMasterResume(): Promise<ResumeData | null> {
       return resume;
     }
 
+    console.log(
+      "[Popup] Resume not found on localhost, checking localStorage directly...",
+    );
+
+    // Try 3: Check localStorage directly (in case it's accessible from extension context)
+    try {
+      const stored = localStorage.getItem("resumematch_master_resume");
+      if (stored) {
+        const resume = JSON.parse(stored);
+        console.log(
+          "[Popup] ✓ Resume found in localStorage:",
+          resume.contact?.name,
+        );
+        state.masterResume = resume;
+
+        // Ensure it's in chrome.storage for future use
+        try {
+          await setMasterResume(resume);
+          console.log("[Popup] ✓ Resume synced to chrome.storage.sync");
+        } catch (e) {
+          console.warn("[Popup] Could not sync to chrome.storage:", e);
+        }
+
+        return resume;
+      }
+    } catch (e) {
+      console.warn("[Popup] Could not check localStorage:", e);
+    }
+
     console.warn("[Popup] Resume not found in any storage");
     return null;
   } catch (error) {
