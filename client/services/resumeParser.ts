@@ -17,11 +17,15 @@ export async function parseFile(file: File): Promise<ResumeData> {
   } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
     text = await extractTextFromPDF(file);
   } else {
-    throw new Error("Unsupported file format. Please upload .docx, .txt, or .pdf file.");
+    throw new Error(
+      "Unsupported file format. Please upload .docx, .txt, or .pdf file.",
+    );
   }
 
   if (!text || text.trim().length === 0) {
-    throw new Error("Could not extract text from file. Please check the file format.");
+    throw new Error(
+      "Could not extract text from file. Please check the file format.",
+    );
   }
 
   // Use Gemini to parse completely if API key is available
@@ -78,7 +82,10 @@ async function extractTextFromPDF(file: File): Promise<string> {
   }
 }
 
-async function parseWithGemini(content: string, apiKey: string): Promise<ResumeData> {
+async function parseWithGemini(
+  content: string,
+  apiKey: string,
+): Promise<ResumeData> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -117,12 +124,18 @@ async function parseWithGemini(content: string, apiKey: string): Promise<ResumeD
     });
 
     const responseText = result.response.text();
-    console.log("[Gemini] Parse response received, length:", responseText.length);
+    console.log(
+      "[Gemini] Parse response received, length:",
+      responseText.length,
+    );
 
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error("[Gemini] No JSON found in response:", responseText.substring(0, 500));
+      console.error(
+        "[Gemini] No JSON found in response:",
+        responseText.substring(0, 500),
+      );
       throw new Error("Failed to parse resume. Invalid response format.");
     }
 
@@ -202,7 +215,13 @@ function buildResumeObject(parsed: any): ResumeData {
   };
 
   // Add all other sections dynamically
-  const standardKeys = ["contact", "summary", "skills", "experience", "education"];
+  const standardKeys = [
+    "contact",
+    "summary",
+    "skills",
+    "experience",
+    "education",
+  ];
   for (const key in parsed) {
     if (!standardKeys.includes(key) && parsed[key]) {
       (resume as any)[key] = parsed[key];

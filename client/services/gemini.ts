@@ -31,7 +31,7 @@ function handleExtensionContextError(error: any): Error {
     errorMessage.includes("context invalidated")
   ) {
     return new Error(
-      `Extension context invalidated error: ${errorMessage}. Please refresh the page and try again.`
+      `Extension context invalidated error: ${errorMessage}. Please refresh the page and try again.`,
     );
   }
 

@@ -24,7 +24,7 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
       const apiKey = await getApiKeyFromSettings();
       if (!apiKey || apiKey.trim().length === 0) {
         setError(
-          "⚠️ API Key Required. Please configure your Gemini API key in Settings before uploading your resume."
+          "⚠️ API Key Required. Please configure your Gemini API key in Settings before uploading your resume.",
         );
         if (onApiKeyMissing) {
           onApiKeyMissing();
@@ -49,7 +49,7 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
 
       const validExtensions = [".docx", ".txt", ".pdf"];
       const hasValidExtension = validExtensions.some((ext) =>
-        file.name.toLowerCase().endsWith(ext)
+        file.name.toLowerCase().endsWith(ext),
       );
 
       if (!hasValidExtension) {
@@ -86,10 +86,12 @@ Please try one of the following:
    - Click "Remove" or "Clear"
    - Refresh the page
 
-Then re-enable the extension and try again.`
+Then re-enable the extension and try again.`,
         );
       } else {
-        setError(errorMessage || "Failed to parse resume. Please try another file.");
+        setError(
+          errorMessage || "Failed to parse resume. Please try another file.",
+        );
       }
       console.error("Resume parsing error:", err);
     }
@@ -178,7 +180,8 @@ Then re-enable the extension and try again.`
                   Upload Your Master Resume
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Drag and drop your resume or click to browse (.docx, .txt, or .pdf)
+                  Drag and drop your resume or click to browse (.docx, .txt, or
+                  .pdf)
                 </p>
               </div>
             </>

@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { ResumeData, JobDescription } from "@/types";
-import { getMasterResume, getApiKeyFromSettings, getSettings } from "@/utils/storage";
+import {
+  getMasterResume,
+  getApiKeyFromSettings,
+  getSettings,
+} from "@/utils/storage";
 import { Settings } from "@/components/Settings";
 import {
   tailorResumeForJob,
@@ -23,7 +27,9 @@ export const TailorResume: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [missingContentSections, setMissingContentSections] = useState<string[]>([]);
+  const [missingContentSections, setMissingContentSections] = useState<
+    string[]
+  >([]);
 
   const [tailorState, setTailorState] = useState<{
     tailored: ResumeData | null;
@@ -62,12 +68,13 @@ export const TailorResume: React.FC = () => {
 
   const checkMissingContentSections = (
     tailored: ResumeData,
-    configuredSections: string[]
+    configuredSections: string[],
   ): string[] => {
     const missing: string[] = [];
 
     for (const section of configuredSections) {
-      const sectionKey = section.charAt(0).toLowerCase() + section.slice(1).replace(/ /g, "");
+      const sectionKey =
+        section.charAt(0).toLowerCase() + section.slice(1).replace(/ /g, "");
       const sectionValue = (tailored as any)[sectionKey];
 
       // Check if section exists and has meaningful content
@@ -109,7 +116,7 @@ export const TailorResume: React.FC = () => {
     // Validate API key first
     if (!hasApiKey) {
       setError(
-        "⚠️ API Key Required. Please configure your Gemini API key in Settings before analyzing resumes."
+        "⚠️ API Key Required. Please configure your Gemini API key in Settings before analyzing resumes.",
       );
       setShowSettings(true);
       return;
@@ -162,12 +169,10 @@ Please try one of the following:
    - Click "Remove" or "Clear"
    - Refresh the page
 
-Then re-enable the extension and try again.`
+Then re-enable the extension and try again.`,
         );
       } else {
-        setError(
-          `Failed to tailor resume: ${errorMessage || "Unknown error"}`,
-        );
+        setError(`Failed to tailor resume: ${errorMessage || "Unknown error"}`);
       }
     } finally {
       setIsTailoring(false);
@@ -255,10 +260,7 @@ Then re-enable the extension and try again.`
   return (
     <div className="min-h-screen bg-background py-12">
       {/* Settings Modal */}
-      <Settings
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
 
       <div className="max-w-6xl mx-auto px-4">
         <button
