@@ -571,11 +571,57 @@ Then re-enable the extension and try again.`
                       });
                       setJobDescription("");
                       setSuccess(null);
+                      setMissingContentSections([]);
                     }}
                     className="w-full px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors font-medium"
                   >
                     ⚡ Tailor Another
                   </button>
+
+                  {/* Missing Content Sections Warning */}
+                  {missingContentSections.length > 0 && (
+                    <div
+                      className="missing-sections-warning"
+                      style={{
+                        background: "#fff3cd",
+                        borderLeft: "4px solid #ffc107",
+                        padding: "12px",
+                        marginTop: "16px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <strong style={{ color: "#856404" }}>
+                        ⚠️ Some sections could not be processed:
+                      </strong>
+                      <ul
+                        style={{
+                          margin: "8px 0",
+                          paddingLeft: "20px",
+                          color: "#856404",
+                        }}
+                      >
+                        {missingContentSections.map((section) => (
+                          <li key={section}>
+                            <strong>{section}:</strong> Not enough content in
+                            your master resume
+                          </li>
+                        ))}
+                      </ul>
+                      <p
+                        style={{
+                          marginTop: "8px",
+                          fontSize: "0.9em",
+                          color: "#856404",
+                        }}
+                      >
+                        💡{" "}
+                        <em>
+                          To include these sections, please update your master
+                          resume with relevant content and re-upload.
+                        </em>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
