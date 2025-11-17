@@ -2,6 +2,7 @@ import { ResumeData, ContactInfo, Experience, Education } from "@/types";
 import mammoth from "mammoth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getApiKeyFromSettings } from "@/utils/storage";
+import { retryWithBackoff } from "@/services/gemini";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY || "";
 
