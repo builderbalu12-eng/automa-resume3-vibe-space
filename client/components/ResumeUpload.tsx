@@ -158,10 +158,10 @@ Then re-enable the extension and try again.`
               </div>
               <div className="text-center">
                 <h3 className="font-semibold text-lg text-primary">
-                  Parsing Resume...
+                  Uploading and processing your resume...
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Extracting and analyzing your resume content
+                  Extracting and analyzing all sections of your resume
                 </p>
                 <div className="mt-4 w-48 h-2 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-primary animate-pulse" />
