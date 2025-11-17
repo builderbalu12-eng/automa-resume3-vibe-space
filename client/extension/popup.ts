@@ -348,6 +348,22 @@ if (tailorBtn) {
       return;
     }
 
+    // Check if Gemini API key is configured BEFORE starting
+    const hasApiKey = await hasGeminiApiKey();
+    if (!hasApiKey) {
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+        errorEl.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 8px;">⚠️ API Key Required</div>
+          <div>${getMissingApiKeyMessage()}</div>
+          <div style="margin-top: 8px; font-size: 11px; opacity: 0.9;">
+            Click "Open Dashboard" to configure your Gemini API key.
+          </div>
+        `;
+      }
+      return;
+    }
+
     if (loadingEl) loadingEl.classList.remove("hidden");
     if (errorEl) errorEl.classList.add("hidden");
     if (successEl) successEl.classList.add("hidden");
