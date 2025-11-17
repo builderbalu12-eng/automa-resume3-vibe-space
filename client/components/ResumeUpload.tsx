@@ -127,7 +127,7 @@ Then re-enable the extension and try again.`
       <input
         ref={fileInputRef}
         type="file"
-        accept=".docx"
+        accept=".docx,.txt,.pdf"
         onChange={handleChange}
         className="hidden"
         disabled={isLoading}
