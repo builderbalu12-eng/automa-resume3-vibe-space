@@ -251,7 +251,17 @@ export async function setSettings(settings: AppSettings): Promise<void> {
 export async function getApiKeyFromSettings(): Promise<string | null> {
   try {
     const settings = await getSettings();
-    return settings?.geminiApiKey || null;
+    if (settings?.geminiApiKey) {
+      return settings.geminiApiKey;
+    }
+
+    // Fallback: check if key was stored directly
+    const apiKey = await getFromStorage(STORAGE_KEYS.GEMINI_API_KEY);
+    if (apiKey) {
+      return apiKey;
+    }
+
+    return null;
   } catch (err) {
     console.error("Error getting API key from settings:", err);
     return null;
