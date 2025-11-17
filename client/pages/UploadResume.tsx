@@ -11,6 +11,7 @@ export const UploadResume: React.FC = () => {
   const [resume, setResume] = useState<ResumeData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleUploadSuccess = async (uploadedResume: ResumeData) => {
     setIsLoading(true);
