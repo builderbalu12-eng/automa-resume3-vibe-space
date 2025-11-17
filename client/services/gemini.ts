@@ -566,7 +566,10 @@ Return ONLY valid JSON:
     // Generate all custom sections in ONE API call (batch) instead of multiple calls
     if (configuredSections && configuredSections.length > 0) {
       const sectionsTemplate = configuredSections
-        .map((section) => `"${section}": "3-4 sentences relevant to ${jobDescription.title}"`)
+        .map(
+          (section) =>
+            `"${section}": "3-4 sentences relevant to ${jobDescription.title}"`,
+        )
         .join(", ");
 
       const customSectionsPrompt = `Generate resume content for: ${jobDescription.title} at ${jobDescription.company}
