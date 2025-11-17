@@ -570,6 +570,20 @@ export async function downloadResumePDF(
         `
             : ""
         }
+
+        ${
+          resume.customSections && Object.keys(resume.customSections).length > 0
+            ? Object.entries(resume.customSections)
+                .filter(([, content]) => content && content.trim())
+                .map(
+                  ([sectionName, sectionContent]) => `
+            <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">${sectionName}</h2>
+            <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${sectionContent}</p>
+          `,
+                )
+                .join("")
+            : ""
+        }
       </div>
     `;
 
