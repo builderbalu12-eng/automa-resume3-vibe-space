@@ -54,7 +54,8 @@ function injectButton() {
           },
           (response) => {
             if (chrome.runtime.lastError) {
-              const errorMsg = chrome.runtime.lastError.message || "Unknown error";
+              const errorMsg =
+                chrome.runtime.lastError.message || "Unknown error";
               console.error(
                 "[Content Script] Error sending message:",
                 errorMsg,
@@ -98,7 +99,8 @@ function injectButton() {
         );
       } catch (error) {
         console.error("[Content Script] Error analyzing page:", error);
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
 
         // Handle context invalidation error
         if (
