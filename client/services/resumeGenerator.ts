@@ -385,6 +385,34 @@ export async function generateResumeDocx(
     });
   }
 
+  if (resume.customSections && Object.keys(resume.customSections).length > 0) {
+    for (const [sectionName, sectionContent] of Object.entries(resume.customSections)) {
+      if (sectionContent && sectionContent.trim()) {
+        sections.push(
+          new Paragraph({
+            text: sectionName.toUpperCase(),
+            bold: true,
+            size: 24,
+            border: {
+              bottom: {
+                color: "000000",
+                space: 1,
+                style: BorderStyle.SINGLE,
+                size: 6,
+              },
+            },
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            text: sectionContent,
+            size: 22,
+            spacing: { after: 400 },
+          }),
+        );
+      }
+    }
+  }
+
   const doc = new Document({
     sections: [
       {
