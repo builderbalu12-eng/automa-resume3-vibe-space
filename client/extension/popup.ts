@@ -1,5 +1,10 @@
 import { getMasterResume, setMasterResume } from "@/utils/storage";
-import { analyzeJobAndTailorResume, isJobPostingPage } from "@/services/gemini";
+import {
+  analyzeJobAndTailorResume,
+  isJobPostingPage,
+  hasGeminiApiKey,
+  getMissingApiKeyMessage,
+} from "@/services/gemini";
 import { downloadResume } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
 
