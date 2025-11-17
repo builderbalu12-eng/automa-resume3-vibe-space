@@ -22,6 +22,20 @@ if (
 
 let client: GoogleGenerativeAI | null = null;
 
+// Check if API key is available WITHOUT initializing client
+export async function hasGeminiApiKey(): Promise<boolean> {
+  let apiKey = GEMINI_API_KEY;
+  if (!apiKey) {
+    apiKey = await getApiKeyFromSettings();
+  }
+  return !!apiKey;
+}
+
+// Get the error message to show when API key is missing
+export function getMissingApiKeyMessage(): string {
+  return "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).";
+}
+
 async function initGemini(): Promise<GoogleGenerativeAI> {
   if (client) return client;
 
@@ -32,9 +46,7 @@ async function initGemini(): Promise<GoogleGenerativeAI> {
   }
 
   if (!apiKey) {
-    throw new Error(
-      "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).",
-    );
+    throw new Error(getMissingApiKeyMessage());
   }
 
   client = new GoogleGenerativeAI(apiKey);
