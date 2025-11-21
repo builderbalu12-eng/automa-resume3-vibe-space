@@ -1,5 +1,10 @@
 import { getMasterResume, setMasterResume } from "@/utils/storage";
-import { analyzeJobAndTailorResume, isJobPostingPage } from "@/services/gemini";
+import {
+  analyzeJobAndTailorResume,
+  isJobPostingPage,
+  hasGeminiApiKey,
+  getMissingApiKeyMessage,
+} from "@/services/gemini";
 import { downloadResume } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
 
@@ -43,6 +48,9 @@ const dashboardLink = document.getElementById(
 const customAnalyseBtn = document.getElementById(
   "custom-analyse-btn",
 ) as HTMLButtonElement | null;
+const openDashboardBtn = document.getElementById(
+  "open-dashboard-btn",
+) as HTMLButtonElement | null;
 
 console.log("[Popup] DOM elements found:", {
   statusEl: !!statusEl,
@@ -53,6 +61,7 @@ console.log("[Popup] DOM elements found:", {
   buttonsEl: !!buttonsEl,
   tailorBtn: !!tailorBtn,
   downloadBtn: !!downloadBtn,
+  openDashboardBtn: !!openDashboardBtn,
 });
 
 // Helper to get resume from localhost tabs
@@ -135,6 +144,35 @@ async function loadMasterResume(): Promise<ResumeData | null> {
       }
 
       return resume;
+    }
+
+    console.log(
+      "[Popup] Resume not found on localhost, checking localStorage directly...",
+    );
+
+    // Try 3: Check localStorage directly (in case it's accessible from extension context)
+    try {
+      const stored = localStorage.getItem("resumematch_master_resume");
+      if (stored) {
+        const resume = JSON.parse(stored);
+        console.log(
+          "[Popup] ✓ Resume found in localStorage:",
+          resume.contact?.name,
+        );
+        state.masterResume = resume;
+
+        // Ensure it's in chrome.storage for future use
+        try {
+          await setMasterResume(resume);
+          console.log("[Popup] ✓ Resume synced to chrome.storage.sync");
+        } catch (e) {
+          console.warn("[Popup] Could not sync to chrome.storage:", e);
+        }
+
+        return resume;
+      }
+    } catch (e) {
+      console.warn("[Popup] Could not check localStorage:", e);
     }
 
     console.warn("[Popup] Resume not found in any storage");
@@ -343,6 +381,22 @@ if (tailorBtn) {
       return;
     }
 
+    // Check if Gemini API key is configured BEFORE starting
+    const hasApiKey = await hasGeminiApiKey();
+    if (!hasApiKey) {
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+        errorEl.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 8px;">⚠️ API Key Required</div>
+          <div>${getMissingApiKeyMessage()}</div>
+          <div style="margin-top: 8px; font-size: 11px; opacity: 0.9;">
+            Click "Open Dashboard" to configure your Gemini API key.
+          </div>
+        `;
+      }
+      return;
+    }
+
     if (loadingEl) loadingEl.classList.remove("hidden");
     if (errorEl) errorEl.classList.add("hidden");
     if (successEl) successEl.classList.add("hidden");
@@ -465,7 +519,27 @@ if (tailorBtn) {
         errorEl.classList.remove("hidden");
         const errorMsg =
           error instanceof Error ? error.message : "Unknown error";
-        errorEl.textContent = `✗ Error: ${errorMsg}`;
+
+        // Handle "Extension context invalidated" error with clear explanation
+        if (
+          errorMsg.includes("Extension context invalidated") ||
+          errorMsg.includes("context invalidated")
+        ) {
+          errorEl.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 8px;">⚠️ Extension Context Lost</div>
+            <div style="margin-bottom: 8px;">The extension needs to be reinitialized. This can happen when:</div>
+            <ul style="margin: 8px 0 8px 20px; font-size: 11px;">
+              <li>The extension is updated or reloaded</li>
+              <li>The extension was disabled and re-enabled</li>
+              <li>Your browser was updated</li>
+            </ul>
+            <div style="margin-top: 8px; font-size: 11px;">
+              <strong>Fix:</strong> Close this popup and click the extension icon again.
+            </div>
+          `;
+        } else {
+          errorEl.textContent = `✗ Error: ${errorMsg}`;
+        }
       }
       console.error("[Popup] Tailoring error:", error);
       if (tailorBtn) tailorBtn.disabled = false;
@@ -510,6 +584,22 @@ if (downloadBtn) {
 if (customAnalyseBtn) {
   customAnalyseBtn.addEventListener("click", async () => {
     try {
+      // Check if Gemini API key is configured BEFORE starting
+      const hasApiKey = await hasGeminiApiKey();
+      if (!hasApiKey) {
+        if (errorEl) {
+          errorEl.classList.remove("hidden");
+          errorEl.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 8px;">⚠️ API Key Required</div>
+            <div>${getMissingApiKeyMessage()}</div>
+            <div style="margin-top: 8px; font-size: 11px; opacity: 0.9;">
+              Click "Open Dashboard" to configure your Gemini API key.
+            </div>
+          `;
+        }
+        return;
+      }
+
       if (customAnalyseBtn) {
         customAnalyseBtn.disabled = true;
         customAnalyseBtn.textContent = "⏳ Analyzing current page...";
@@ -585,13 +675,50 @@ if (customAnalyseBtn) {
       console.error("[Popup] CustomAnalyse error:", error);
       if (errorEl) {
         errorEl.classList.remove("hidden");
-        errorEl.textContent = `✗ Error: ${error instanceof Error ? error.message : "Unknown error"}`;
+
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
+
+        // Handle "Extension context invalidated" error with clear explanation
+        if (
+          errorMsg.includes("Extension context invalidated") ||
+          errorMsg.includes("context invalidated")
+        ) {
+          errorEl.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 8px;">⚠️ Extension Context Lost</div>
+            <div style="margin-bottom: 8px;">The extension needs to be reinitialized. This can happen when:</div>
+            <ul style="margin: 8px 0 8px 20px; font-size: 11px;">
+              <li>The extension is updated or reloaded</li>
+              <li>The extension was disabled and re-enabled</li>
+              <li>Your browser was updated</li>
+            </ul>
+            <div style="margin-top: 8px; font-size: 11px;">
+              <strong>Fix:</strong> Close this popup and click the extension icon again.
+            </div>
+          `;
+        } else {
+          errorEl.textContent = `✗ Error: ${errorMsg}`;
+        }
       }
     } finally {
       if (customAnalyseBtn) {
         customAnalyseBtn.disabled = false;
         customAnalyseBtn.textContent = "CustomAnaylse for current page";
       }
+    }
+  });
+}
+
+// Handle "Open Dashboard" button
+if (openDashboardBtn) {
+  openDashboardBtn.addEventListener("click", () => {
+    try {
+      console.log("[Popup] Opening dashboard...");
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("../index.html"),
+      });
+    } catch (e) {
+      console.error("[Popup] Error opening dashboard:", e);
     }
   });
 }

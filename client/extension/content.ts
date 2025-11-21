@@ -54,13 +54,25 @@ function injectButton() {
           },
           (response) => {
             if (chrome.runtime.lastError) {
+              const errorMsg =
+                chrome.runtime.lastError.message || "Unknown error";
               console.error(
                 "[Content Script] Error sending message:",
-                chrome.runtime.lastError.message,
+                errorMsg,
               );
-              alert(
-                `Error: ${chrome.runtime.lastError.message}. Please try again.`,
-              );
+
+              // Handle context invalidation error
+              if (
+                errorMsg.includes("Extension context invalidated") ||
+                errorMsg.includes("context invalidated")
+              ) {
+                alert(
+                  "Extension context was lost. Please click the ResumeMatch extension icon again to reinitialize it. This can happen when the extension is updated, reloaded, or your browser is restarted.",
+                );
+              } else {
+                alert(`Error: ${errorMsg}. Please try again.`);
+              }
+
               button.textContent = "Analyse";
               button.disabled = false;
             } else if (response?.success) {
@@ -87,9 +99,21 @@ function injectButton() {
         );
       } catch (error) {
         console.error("[Content Script] Error analyzing page:", error);
-        alert(
-          `Failed to analyze page: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
+
+        // Handle context invalidation error
+        if (
+          errorMsg.includes("Extension context invalidated") ||
+          errorMsg.includes("context invalidated")
+        ) {
+          alert(
+            "Extension context was lost. Please click the ResumeMatch extension icon again to reinitialize it. This can happen when the extension is updated, reloaded, or your browser is restarted.",
+          );
+        } else {
+          alert(`Failed to analyze page: ${errorMsg}`);
+        }
+
         button.textContent = "Analyse";
         button.disabled = false;
       }

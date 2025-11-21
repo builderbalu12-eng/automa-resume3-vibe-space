@@ -2,39 +2,34 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
 import { getApiKeyFromSettings } from "@/utils/storage";
 
-let GEMINI_API_KEY = "";
-
-try {
-  GEMINI_API_KEY = (import.meta.env as any)?.VITE_GOOGLE_GEMINI_API_KEY || "";
-} catch (e) {
-  console.warn("[Gemini] Could not access import.meta.env:", e);
-  GEMINI_API_KEY = "";
-}
-
-// Also try to get from window object if extension context
-if (
-  !GEMINI_API_KEY &&
-  typeof window !== "undefined" &&
-  (window as any).GEMINI_API_KEY
-) {
-  GEMINI_API_KEY = (window as any).GEMINI_API_KEY;
-}
-
 let client: GoogleGenerativeAI | null = null;
+
+// Check if API key is available in Settings
+// NOTE: We ONLY check Settings storage, not environment variables
+// Users MUST explicitly set it in Settings (⚙️) to use the extension
+export async function hasGeminiApiKey(): Promise<boolean> {
+  try {
+    const apiKey = await getApiKeyFromSettings();
+    return !!apiKey && apiKey.trim().length > 0;
+  } catch (e) {
+    console.error("[Gemini] Error checking API key:", e);
+    return false;
+  }
+}
+
+// Get the error message to show when API key is missing
+export function getMissingApiKeyMessage(): string {
+  return "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).";
+}
 
 async function initGemini(): Promise<GoogleGenerativeAI> {
   if (client) return client;
 
-  // Try to get API key from localStorage first
-  let apiKey = GEMINI_API_KEY;
-  if (!apiKey) {
-    apiKey = await getApiKeyFromSettings();
-  }
+  // ONLY get from Settings - user must explicitly save it there
+  const apiKey = await getApiKeyFromSettings();
 
-  if (!apiKey) {
-    throw new Error(
-      "Gemini API key not configured. Please set it in Settings (⚙️ button in top-right corner).",
-    );
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw new Error(getMissingApiKeyMessage());
   }
 
   client = new GoogleGenerativeAI(apiKey);
