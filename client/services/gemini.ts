@@ -948,7 +948,7 @@ ${resumeText}`;
         ? jobData.skills.join(", ")
         : "";
 
-      const sectionsTemplate = configuredSections
+      const sectionsTemplate = sectionsToGenerate
         .map(
           (section) =>
             `"${section}": "3-4 sentences relevant to ${jobData.title}"`,
