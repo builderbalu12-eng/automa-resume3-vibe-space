@@ -504,23 +504,29 @@ export async function tailorResumeForJob(
       ? jobDescription.description.substring(0, 300)
       : "");
 
-  const prompt = `Tailor this resume for the job: ${jobDescription.title} at ${jobDescription.company}
-Skills needed: ${jobSkills}
-Requirements: ${jobRequirements}
+  const prompt = `Tailor this resume for maximum impact for: ${jobDescription.title} at ${jobDescription.company}
+
+Job details:
+- Title: ${jobDescription.title}
+- Company: ${jobDescription.company}
+- Required Skills: ${jobSkills}
+- Key Requirements: ${jobRequirements}
 
 Resume:
-Name: ${masterResume.contact.name}
-Skills: ${masterResume.skills.join(", ")}
-Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
-${masterResume.projects && masterResume.projects.length > 0 ? `Projects: ${masterResume.projects.map((p) => p.title).join(" | ")}` : ""}
+- Name: ${masterResume.contact.name}
+- Skills: ${masterResume.skills.join(", ")}
+- Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+${masterResume.projects && masterResume.projects.length > 0 ? `- Projects: ${masterResume.projects.map((p) => `${p.title} (${p.technologies?.join(", ")})`).join(" | ")}` : ""}
 
-Return ONLY valid JSON:
+Return ONLY valid JSON with enhanced content aligned to job requirements:
 {
-  "tailoredSummary": "2-3 sentence summary for this job",
-  "tailoredExperience": [{"jobTitle": "original title", "newBullets": ["bullet1", "bullet2"]}],
-  "tailoredProjects": [{"title": "project title", "newDescription": "2-3 sentence description highlighting relevant skills"}],
-  "recommendedSkillsOrder": ["skill1", "skill2"]
-}`;
+  "tailoredSummary": "2-3 sentence summary highlighting most relevant experience for this specific role",
+  "tailoredExperience": [{"jobTitle": "original job title", "newBullets": ["impact-driven bullet with metrics", "bullet emphasizing job-relevant skills"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "3-4 sentences describing project impact, technologies used that match job requirements, and measurable results"}],
+  "recommendedSkillsOrder": ["most relevant skill to job", "second most relevant skill"]
+}
+
+Important for projects: Provide 3-4 detailed sentences describing the project's impact, the technologies used (especially those mentioned in job posting), and quantified results where applicable.`;
 
   try {
     // Main tailor prompt with retry logic
