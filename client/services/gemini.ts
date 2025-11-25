@@ -944,6 +944,8 @@ ${resumeText}`;
     }
 
     if (sectionsToGenerate && sectionsToGenerate.length > 0) {
+      console.log("[Gemini] Generating custom sections:", sectionsToGenerate);
+
       const jobSkills = Array.isArray(jobData.skills)
         ? jobData.skills.join(", ")
         : "";
