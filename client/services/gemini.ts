@@ -930,15 +930,20 @@ ${resumeText}`;
     };
 
     // Get configured custom sections from settings and generate them
-    let appSettings: any = null;
-    try {
-      appSettings = await getSettings();
-    } catch (e) {
-      console.warn("[Gemini] Could not load settings for custom sections:", e);
+    let sectionsToGenerate = configuredSections;
+
+    // If not provided as parameter, try to load from settings
+    if (!sectionsToGenerate || sectionsToGenerate.length === 0) {
+      let appSettings: any = null;
+      try {
+        appSettings = await getSettings();
+      } catch (e) {
+        console.warn("[Gemini] Could not load settings for custom sections:", e);
+      }
+      sectionsToGenerate = appSettings?.resumeContentSections || [];
     }
 
-    const configuredSections = appSettings?.resumeContentSections || [];
-    if (configuredSections.length > 0) {
+    if (sectionsToGenerate && sectionsToGenerate.length > 0) {
       const jobSkills = Array.isArray(jobData.skills)
         ? jobData.skills.join(", ")
         : "";
