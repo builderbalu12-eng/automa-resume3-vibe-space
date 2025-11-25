@@ -792,28 +792,38 @@ export async function analyzeJobAndTailorResume(
     2,
   );
 
-  const prompt = `Extract job details and tailor resume. Return valid JSON:
+  const prompt = `Extract job details and tailor resume for maximum ATS matching. Return valid JSON:
 {
   "jobTitle": "title",
   "company": "company",
   "location": "location or 'Not specified'",
-  "jobDescription": "description from page",
-  "requirements": ["requirement1"],
-  "skills": ["skill1"],
-  "tailoredSummary": "summary for this job",
-  "tailoredExperience": [{"position": "job title", "newBullets": ["bullet1", "bullet2"]}],
-  "tailoredProjects": [{"title": "project title", "newDescription": "2-3 sentence description highlighting relevant skills"}],
-  "tailoredSkillsOrder": ["skill1", "skill2"],
+  "jobDescription": "full job description from page",
+  "requirements": ["requirement1", "requirement2"],
+  "skills": ["skill1", "skill2"],
+  "tailoredSummary": "2-3 sentence summary emphasizing relevant experience for this specific job",
+  "tailoredExperience": [{"position": "original job title", "newBullets": ["bullet1 with metrics", "bullet2 with keywords"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "3-4 sentences describing project impact, technologies used relevant to job, and measurable results"}],
+  "tailoredSkillsOrder": ["most relevant skill", "second most relevant"],
   "atsScore": 0-100,
   "atsMatchPercentage": 0-100,
-  "matchedKeywords": ["keyword1"],
+  "matchedKeywords": ["keyword1", "keyword2"],
   "missingKeywords": ["keyword1"],
   "improvements": ["improvement1"],
-  "jobSummary": "summary"
+  "jobSummary": "summary with match percentage"
 }
 
-Job posting: ${cleanHTML}
-Resume: ${resumeText}`;
+Instructions:
+- Extract ALL job skills and requirements from the posting
+- Calculate ATS score (0-100) based on skill and keyword matches
+- For tailoredProjects: provide 3-4 detailed sentences describing project impact, relevant technologies, and quantified results
+- For tailoredExperience: write impact-driven bullets with metrics where possible
+- Order skills by relevance to job posting
+
+Job posting:
+${cleanHTML}
+
+Resume:
+${resumeText}`;
 
   try {
     console.log("[Gemini] Analyzing job and tailoring resume...");
