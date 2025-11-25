@@ -1,4 +1,4 @@
-import { getMasterResume, setMasterResume } from "@/utils/storage";
+import { getMasterResume, setMasterResume, getSettings } from "@/utils/storage";
 import { analyzeJobAndTailorResume, isJobPostingPage } from "@/services/gemini";
 import { downloadResume } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
