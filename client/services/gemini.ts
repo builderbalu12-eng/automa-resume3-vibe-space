@@ -564,13 +564,14 @@ Important for projects: Provide 3-4 detailed sentences describing the project's 
       }),
       projects: masterResume.projects?.map((proj) => {
         const tailored = parsed.tailoredProjects?.find(
-          (t: any) =>
-            t.title?.toLowerCase() === proj.title.toLowerCase(),
+          (t: any) => t.title?.toLowerCase() === proj.title.toLowerCase(),
         );
         return {
           ...proj,
           description:
-            tailored?.newDescription && typeof tailored.newDescription === "string" && tailored.newDescription.trim()
+            tailored?.newDescription &&
+            typeof tailored.newDescription === "string" &&
+            tailored.newDescription.trim()
               ? tailored.newDescription
               : proj.description,
         };
@@ -904,15 +905,16 @@ ${resumeText}`;
       projects: masterResume.projects?.map((proj) => {
         const tailored = Array.isArray(parsed.tailoredProjects)
           ? parsed.tailoredProjects.find(
-              (t: any) =>
-                t.title?.toLowerCase() === proj.title.toLowerCase(),
+              (t: any) => t.title?.toLowerCase() === proj.title.toLowerCase(),
             )
           : null;
 
         return {
           ...proj,
           description:
-            tailored?.newDescription && typeof tailored.newDescription === "string" && tailored.newDescription.trim()
+            tailored?.newDescription &&
+            typeof tailored.newDescription === "string" &&
+            tailored.newDescription.trim()
               ? tailored.newDescription
               : proj.description,
         };
