@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
-import { getApiKeyFromSettings } from "@/utils/storage";
+import { getApiKeyFromSettings, getSettings } from "@/utils/storage";
 
 // Retry utility with exponential backoff
 export async function retryWithBackoff<T>(
