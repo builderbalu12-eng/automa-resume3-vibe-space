@@ -770,6 +770,7 @@ Return ONLY valid JSON:
 export async function analyzeJobAndTailorResume(
   pageHTML: string,
   masterResume: ResumeData,
+  configuredSections?: string[],
 ): Promise<TailoredResumeResult> {
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
