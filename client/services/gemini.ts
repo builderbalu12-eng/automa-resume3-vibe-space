@@ -929,16 +929,25 @@ ${resumeText}`;
         )
         .join(", ");
 
-      const customSectionsPrompt = `Generate resume content for: ${jobData.title} at ${jobData.company}
-Skills needed: ${jobSkills}
-Resume person: ${masterResume.contact.name} with experience in ${masterResume.experience.map((e) => e.title).join(", ")}
+      const customSectionsPrompt = `Generate compelling resume content for custom sections tailored to this job opportunity.
 
-Return ONLY valid JSON with 3-4 sentence content for each section:
+Job: ${jobData.title} at ${jobData.company}
+Skills needed: ${jobSkills}
+Job requirements: ${Array.isArray(jobData.requirements) ? jobData.requirements.join(", ") : ""}
+Candidate: ${masterResume.contact.name}
+Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+Education: ${masterResume.education.map((e) => `${e.degree} in ${e.field}`).join(" | ")}
+
+Generate 3-4 sentence content for each section that aligns with the job requirements and showcases relevant experience:
+
+Return ONLY valid JSON:
 {
   "sections": {
     ${sectionsTemplate}
   }
-}`;
+}
+
+Important: Each section content should be specific, substantial (3-4 sentences), and demonstrate how the candidate's background aligns with the job requirements.`;
 
       try {
         const customResult = await retryWithBackoff(async () => {
