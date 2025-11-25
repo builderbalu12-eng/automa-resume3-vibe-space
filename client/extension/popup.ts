@@ -351,10 +351,21 @@ if (tailorBtn) {
     try {
       console.log("[Popup] Starting job analysis and resume tailoring...");
 
-      // Call unified Gemini function
+      // Load configured custom sections from settings
+      let configuredSections: string[] = [];
+      try {
+        const settings = await getSettings();
+        configuredSections = settings?.resumeContentSections || [];
+        console.log("[Popup] Loaded configured sections:", configuredSections);
+      } catch (e) {
+        console.warn("[Popup] Could not load settings, proceeding without custom sections:", e);
+      }
+
+      // Call unified Gemini function with configured sections
       const result = await analyzeJobAndTailorResume(
         state.pageHTML,
         state.masterResume,
+        configuredSections,
       );
 
       console.log("[Popup] ✓ Job analysis complete:", result.jobData.title);
