@@ -767,6 +767,11 @@ export async function analyzeJobAndTailorResume(
         institution: e.institution,
         graduation: e.graduationDate,
       })),
+      projects: masterResume.projects?.map((p) => ({
+        title: p.title,
+        description: p.description,
+        technologies: p.technologies,
+      })),
     },
     null,
     2,
@@ -782,6 +787,7 @@ export async function analyzeJobAndTailorResume(
   "skills": ["skill1"],
   "tailoredSummary": "summary for this job",
   "tailoredExperience": [{"position": "job title", "newBullets": ["bullet1", "bullet2"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "2-3 sentence description highlighting relevant skills"}],
   "tailoredSkillsOrder": ["skill1", "skill2"],
   "atsScore": 0-100,
   "atsMatchPercentage": 0-100,
@@ -852,6 +858,22 @@ Resume: ${resumeText}`;
               : exp.description,
         };
       }),
+      projects: masterResume.projects?.map((proj) => {
+        const tailored = Array.isArray(parsed.tailoredProjects)
+          ? parsed.tailoredProjects.find(
+              (t: any) =>
+                t.title?.toLowerCase() === proj.title.toLowerCase(),
+            )
+          : null;
+
+        return {
+          ...proj,
+          description:
+            tailored?.newDescription && typeof tailored.newDescription === "string" && tailored.newDescription.trim()
+              ? tailored.newDescription
+              : proj.description,
+        };
+      }),
       skills: Array.isArray(parsed.tailoredSkillsOrder)
         ? parsed.tailoredSkillsOrder.filter((s: string) =>
             masterResume.skills.some(
@@ -860,6 +882,73 @@ Resume: ${resumeText}`;
           )
         : masterResume.skills,
     };
+
+    // Get configured custom sections from settings and generate them
+    let appSettings: any = null;
+    try {
+      appSettings = await getSettings();
+    } catch (e) {
+      console.warn("[Gemini] Could not load settings for custom sections:", e);
+    }
+
+    const configuredSections = appSettings?.resumeContentSections || [];
+    if (configuredSections.length > 0) {
+      const jobSkills = Array.isArray(jobData.skills)
+        ? jobData.skills.join(", ")
+        : "";
+
+      const sectionsTemplate = configuredSections
+        .map(
+          (section) =>
+            `"${section}": "3-4 sentences relevant to ${jobData.title}"`,
+        )
+        .join(", ");
+
+      const customSectionsPrompt = `Generate resume content for: ${jobData.title} at ${jobData.company}
+Skills needed: ${jobSkills}
+Resume person: ${masterResume.contact.name} with experience in ${masterResume.experience.map((e) => e.title).join(", ")}
+
+Return ONLY valid JSON with 3-4 sentence content for each section:
+{
+  "sections": {
+    ${sectionsTemplate}
+  }
+}`;
+
+      try {
+        const customResult = await retryWithBackoff(async () => {
+          const result = await model.generateContent(customSectionsPrompt);
+          return result.response.text().trim();
+        });
+
+        let customParsed;
+        try {
+          customParsed = JSON.parse(customResult);
+        } catch (e) {
+          const jsonMatch = customResult.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            customParsed = JSON.parse(jsonMatch[0]);
+          }
+        }
+
+        if (customParsed?.sections) {
+          const customSections: Record<string, string> = {};
+          for (const [sectionName, content] of Object.entries(
+            customParsed.sections,
+          )) {
+            const contentStr = String(content).trim();
+            if (contentStr && contentStr.length > 0 && contentStr !== "null") {
+              customSections[sectionName] = contentStr;
+            }
+          }
+          if (Object.keys(customSections).length > 0) {
+            tailoredResume.customSections = customSections;
+          }
+        }
+      } catch (err) {
+        console.warn("[Gemini] Failed to generate custom sections:", err);
+      }
+    }
 
     // Build ATS score
     const atsScore: ATSScore = {
