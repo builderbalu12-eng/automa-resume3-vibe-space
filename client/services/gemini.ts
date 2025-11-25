@@ -512,11 +512,13 @@ Resume:
 Name: ${masterResume.contact.name}
 Skills: ${masterResume.skills.join(", ")}
 Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+${masterResume.projects && masterResume.projects.length > 0 ? `Projects: ${masterResume.projects.map((p) => p.title).join(" | ")}` : ""}
 
 Return ONLY valid JSON:
 {
   "tailoredSummary": "2-3 sentence summary for this job",
   "tailoredExperience": [{"jobTitle": "original title", "newBullets": ["bullet1", "bullet2"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "2-3 sentence description highlighting relevant skills"}],
   "recommendedSkillsOrder": ["skill1", "skill2"]
 }`;
 
@@ -552,6 +554,19 @@ Return ONLY valid JSON:
             tailored?.newBullets && Array.isArray(tailored.newBullets)
               ? tailored.newBullets
               : exp.description,
+        };
+      }),
+      projects: masterResume.projects?.map((proj) => {
+        const tailored = parsed.tailoredProjects?.find(
+          (t: any) =>
+            t.title?.toLowerCase() === proj.title.toLowerCase(),
+        );
+        return {
+          ...proj,
+          description:
+            tailored?.newDescription && typeof tailored.newDescription === "string" && tailored.newDescription.trim()
+              ? tailored.newDescription
+              : proj.description,
         };
       }),
       skills:
