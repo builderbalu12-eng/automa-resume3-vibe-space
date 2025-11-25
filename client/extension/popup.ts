@@ -358,7 +358,10 @@ if (tailorBtn) {
         configuredSections = settings?.resumeContentSections || [];
         console.log("[Popup] Loaded configured sections:", configuredSections);
       } catch (e) {
-        console.warn("[Popup] Could not load settings, proceeding without custom sections:", e);
+        console.warn(
+          "[Popup] Could not load settings, proceeding without custom sections:",
+          e,
+        );
       }
 
       // Call unified Gemini function with configured sections
@@ -376,8 +379,14 @@ if (tailorBtn) {
       state.atsScore = result.atsScore;
 
       // Log custom sections for debugging
-      if (state.tailoredResume.customSections && Object.keys(state.tailoredResume.customSections).length > 0) {
-        console.log("[Popup] ✓ Custom sections generated:", Object.keys(state.tailoredResume.customSections));
+      if (
+        state.tailoredResume.customSections &&
+        Object.keys(state.tailoredResume.customSections).length > 0
+      ) {
+        console.log(
+          "[Popup] ✓ Custom sections generated:",
+          Object.keys(state.tailoredResume.customSections),
+        );
       } else {
         console.log("[Popup] No custom sections in tailored resume");
       }

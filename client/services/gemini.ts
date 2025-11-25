@@ -938,7 +938,10 @@ ${resumeText}`;
       try {
         appSettings = await getSettings();
       } catch (e) {
-        console.warn("[Gemini] Could not load settings for custom sections:", e);
+        console.warn(
+          "[Gemini] Could not load settings for custom sections:",
+          e,
+        );
       }
       sectionsToGenerate = appSettings?.resumeContentSections || [];
     }
