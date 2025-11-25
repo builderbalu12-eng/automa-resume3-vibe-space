@@ -375,6 +375,13 @@ if (tailorBtn) {
       state.tailoredResume = result.tailoredResume;
       state.atsScore = result.atsScore;
 
+      // Log custom sections for debugging
+      if (state.tailoredResume.customSections && Object.keys(state.tailoredResume.customSections).length > 0) {
+        console.log("[Popup] ✓ Custom sections generated:", Object.keys(state.tailoredResume.customSections));
+      } else {
+        console.log("[Popup] No custom sections in tailored resume");
+      }
+
       if (loadingEl) loadingEl.classList.add("hidden");
       if (successEl) {
         successEl.classList.remove("hidden");
