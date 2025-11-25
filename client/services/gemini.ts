@@ -593,16 +593,28 @@ Important for projects: Provide 3-4 detailed sentences describing the project's 
         )
         .join(", ");
 
-      const customSectionsPrompt = `Generate resume content for: ${jobDescription.title} at ${jobDescription.company}
-Skills needed: ${jobSkills}
-Resume person: ${masterResume.contact.name} with experience in ${masterResume.experience.map((e) => e.title).join(", ")}
+      const customSectionsPrompt = `Generate compelling custom resume sections tailored to this job opportunity.
 
-Return ONLY valid JSON with 3-4 sentence content for each section:
+Job: ${jobDescription.title} at ${jobDescription.company}
+Required Skills: ${jobSkills}
+Candidate: ${masterResume.contact.name}
+Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+Education: ${masterResume.education.map((e) => `${e.degree} in ${e.field}`).join(" | ")}
+
+Generate 3-4 sentence content for each section that directly relates to the job requirements and showcases the candidate's relevant strengths:
+
+Return ONLY valid JSON:
 {
   "sections": {
     ${sectionsTemplate}
   }
-}`;
+}
+
+Requirements:
+- Each section should contain 3-4 substantial sentences (not generic text)
+- Content must be specific to the candidate's background and the job requirements
+- Use concrete examples from their experience where applicable
+- Avoid placeholder text or generic resume language`;
 
       try {
         const customResult = await retryWithBackoff(async () => {
