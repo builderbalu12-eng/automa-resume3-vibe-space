@@ -932,22 +932,58 @@ ${resumeText}`;
     // Get configured custom sections from settings and generate them
     let sectionsToGenerate = configuredSections;
 
+    console.log(
+      "[Gemini] analyzeJobAndTailorResume - Received configuredSections:",
+      JSON.stringify(configuredSections),
+    );
+    console.log(
+      "[Gemini] configuredSections type:",
+      Array.isArray(configuredSections) ? "array" : typeof configuredSections,
+    );
+    console.log(
+      "[Gemini] configuredSections length:",
+      configuredSections ? configuredSections.length : "null",
+    );
+
     // If not provided as parameter, try to load from settings
     if (!sectionsToGenerate || sectionsToGenerate.length === 0) {
+      console.log(
+        "[Gemini] No sections from parameter, trying to load from settings...",
+      );
       let appSettings: any = null;
       try {
         appSettings = await getSettings();
+        console.log(
+          "[Gemini] Settings loaded from storage:",
+          JSON.stringify(appSettings),
+        );
       } catch (e) {
-        console.warn(
-          "[Gemini] Could not load settings for custom sections:",
+        console.error(
+          "[Gemini] Error loading settings for custom sections:",
           e,
         );
       }
       sectionsToGenerate = appSettings?.resumeContentSections || [];
+      console.log(
+        "[Gemini] Sections from settings:",
+        JSON.stringify(sectionsToGenerate),
+      );
     }
 
+    console.log(
+      "[Gemini] Final sectionsToGenerate:",
+      JSON.stringify(sectionsToGenerate),
+    );
+    console.log(
+      "[Gemini] sectionsToGenerate length:",
+      sectionsToGenerate ? sectionsToGenerate.length : 0,
+    );
+
     if (sectionsToGenerate && sectionsToGenerate.length > 0) {
-      console.log("[Gemini] Generating custom sections:", sectionsToGenerate);
+      console.log(
+        "[Gemini] Generating custom sections:",
+        JSON.stringify(sectionsToGenerate),
+      );
 
       const jobSkills = Array.isArray(jobData.skills)
         ? jobData.skills.join(", ")
@@ -997,6 +1033,10 @@ Important: Each section content should be specific, substantial (3-4 sentences),
         }
 
         if (customParsed?.sections) {
+          console.log(
+            "[Gemini] Parsed custom sections:",
+            JSON.stringify(customParsed.sections),
+          );
           const customSections: Record<string, string> = {};
           for (const [sectionName, content] of Object.entries(
             customParsed.sections,
@@ -1004,15 +1044,35 @@ Important: Each section content should be specific, substantial (3-4 sentences),
             const contentStr = String(content).trim();
             if (contentStr && contentStr.length > 0 && contentStr !== "null") {
               customSections[sectionName] = contentStr;
+              console.log(
+                `[Gemini] Added custom section "${sectionName}": ${contentStr.substring(0, 100)}...`,
+              );
             }
           }
+          console.log(
+            "[Gemini] Total custom sections added:",
+            Object.keys(customSections).length,
+          );
           if (Object.keys(customSections).length > 0) {
             tailoredResume.customSections = customSections;
+            console.log(
+              "[Gemini] ✓ Custom sections assigned to tailoredResume:",
+              JSON.stringify(customSections),
+            );
           }
+        } else {
+          console.warn(
+            "[Gemini] customParsed has no sections property:",
+            JSON.stringify(customParsed),
+          );
         }
       } catch (err) {
-        console.warn("[Gemini] Failed to generate custom sections:", err);
+        console.error("[Gemini] Failed to generate custom sections:", err);
       }
+    } else {
+      console.log(
+        "[Gemini] Skipping custom section generation - no sections configured",
+      );
     }
 
     // Build ATS score
