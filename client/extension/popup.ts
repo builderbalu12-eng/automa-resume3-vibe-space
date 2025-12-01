@@ -350,19 +350,41 @@ if (tailorBtn) {
 
     try {
       console.log("[Popup] Starting job analysis and resume tailoring...");
+      console.log("[Popup] Master resume has", state.masterResume.contact?.name);
 
       // Load configured custom sections from settings
       let configuredSections: string[] = [];
       try {
+        console.log("[Popup] Attempting to load settings from chrome.storage.sync...");
         const settings = await getSettings();
+        console.log("[Popup] Full settings loaded:", JSON.stringify(settings));
+
         configuredSections = settings?.resumeContentSections || [];
-        console.log("[Popup] Loaded configured sections:", configuredSections);
-      } catch (e) {
-        console.warn(
-          "[Popup] Could not load settings, proceeding without custom sections:",
-          e,
+        console.log(
+          "[Popup] Configured sections count:",
+          configuredSections.length,
         );
+        console.log(
+          "[Popup] Configured sections:",
+          JSON.stringify(configuredSections),
+        );
+
+        if (configuredSections.length === 0) {
+          console.warn("[Popup] No configured sections found in settings");
+        }
+      } catch (e) {
+        console.error(
+          "[Popup] Error loading settings:",
+          e instanceof Error ? e.message : String(e),
+        );
+        configuredSections = [];
       }
+
+      console.log(
+        "[Popup] Calling analyzeJobAndTailorResume with",
+        configuredSections.length,
+        "sections",
+      );
 
       // Call unified Gemini function with configured sections
       const result = await analyzeJobAndTailorResume(
@@ -379,6 +401,11 @@ if (tailorBtn) {
       state.atsScore = result.atsScore;
 
       // Log custom sections for debugging
+      console.log(
+        "[Popup] Tailored resume customSections:",
+        JSON.stringify(state.tailoredResume.customSections),
+      );
+
       if (
         state.tailoredResume.customSections &&
         Object.keys(state.tailoredResume.customSections).length > 0
@@ -387,8 +414,16 @@ if (tailorBtn) {
           "[Popup] ✓ Custom sections generated:",
           Object.keys(state.tailoredResume.customSections),
         );
+        console.log(
+          "[Popup] Custom sections content:",
+          JSON.stringify(state.tailoredResume.customSections),
+        );
       } else {
-        console.log("[Popup] No custom sections in tailored resume");
+        console.warn(
+          "[Popup] WARNING: No custom sections in tailored resume despite",
+          configuredSections.length,
+          "configured sections",
+        );
       }
 
       if (loadingEl) loadingEl.classList.add("hidden");
@@ -510,6 +545,16 @@ if (downloadBtn) {
 
     try {
       console.log("[Popup] Downloading tailored resume as DOCX...");
+      console.log(
+        "[Popup] Resume before download - customSections:",
+        JSON.stringify(state.tailoredResume.customSections),
+      );
+      console.log(
+        "[Popup] Custom sections count before download:",
+        state.tailoredResume.customSections
+          ? Object.keys(state.tailoredResume.customSections).length
+          : 0,
+      );
 
       // Download as DOCX
       await downloadResume(
