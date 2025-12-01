@@ -350,12 +350,17 @@ if (tailorBtn) {
 
     try {
       console.log("[Popup] Starting job analysis and resume tailoring...");
-      console.log("[Popup] Master resume has", state.masterResume.contact?.name);
+      console.log(
+        "[Popup] Master resume has",
+        state.masterResume.contact?.name,
+      );
 
       // Load configured custom sections from settings
       let configuredSections: string[] = [];
       try {
-        console.log("[Popup] Attempting to load settings from chrome.storage.sync...");
+        console.log(
+          "[Popup] Attempting to load settings from chrome.storage.sync...",
+        );
         const settings = await getSettings();
         console.log("[Popup] Full settings loaded:", JSON.stringify(settings));
 

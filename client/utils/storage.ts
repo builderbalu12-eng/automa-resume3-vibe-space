@@ -286,10 +286,7 @@ export async function setSettings(settings: AppSettings): Promise<void> {
 
     // Also save to localStorage for web app context
     try {
-      localStorage.setItem(
-        STORAGE_KEYS.APP_SETTINGS,
-        JSON.stringify(settings),
-      );
+      localStorage.setItem(STORAGE_KEYS.APP_SETTINGS, JSON.stringify(settings));
       console.log("[Storage] Settings saved to localStorage");
     } catch (e) {
       console.warn("[Storage] Failed to save to localStorage:", e);
