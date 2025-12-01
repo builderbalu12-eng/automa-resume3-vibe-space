@@ -274,9 +274,28 @@ export async function getSettings(): Promise<AppSettings | null> {
 
 export async function setSettings(settings: AppSettings): Promise<void> {
   try {
-    await saveToStorage(STORAGE_KEYS.APP_SETTINGS, settings);
+    // Save to chrome.storage.sync if available
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      try {
+        await saveToStorage(STORAGE_KEYS.APP_SETTINGS, settings);
+        console.log("[Storage] Settings saved to chrome.storage.sync");
+      } catch (e) {
+        console.warn("[Storage] Failed to save to chrome.storage.sync:", e);
+      }
+    }
+
+    // Also save to localStorage for web app context
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.APP_SETTINGS,
+        JSON.stringify(settings),
+      );
+      console.log("[Storage] Settings saved to localStorage");
+    } catch (e) {
+      console.warn("[Storage] Failed to save to localStorage:", e);
+    }
   } catch (err) {
-    console.error("Error saving settings:", err);
+    console.error("[Storage] Error saving settings:", err);
     throw err;
   }
 }
