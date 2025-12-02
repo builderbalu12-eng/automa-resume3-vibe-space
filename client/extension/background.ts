@@ -11,7 +11,38 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "analyzeJob") {
+  if (request.action === "saveSettings") {
+    console.log("[Background] Saving settings to chrome.storage.sync:", request.settings);
+    try {
+      chrome.storage.sync.set(
+        {
+          resumematch_settings: JSON.stringify(request.settings),
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Background] Error saving settings:",
+              chrome.runtime.lastError,
+            );
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError?.message,
+            });
+          } else {
+            console.log("[Background] ✓ Settings saved to chrome.storage.sync");
+            sendResponse({ success: true });
+          }
+        },
+      );
+    } catch (e) {
+      console.error("[Background] Exception saving settings:", e);
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    return true;
+  } else if (request.action === "analyzeJob") {
     console.log("[Background] Received analyzeJob from content script", {
       htmlLength: request.pageHTML?.length,
       url: request.pageURL,
