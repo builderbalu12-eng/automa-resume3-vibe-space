@@ -12,7 +12,10 @@ chrome.runtime.onInstalled.addListener(() => {
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "saveSettings") {
-    console.log("[Background] Saving settings to chrome.storage.sync:", request.settings);
+    console.log(
+      "[Background] Saving settings to chrome.storage.sync:",
+      request.settings,
+    );
     try {
       chrome.storage.sync.set(
         {
