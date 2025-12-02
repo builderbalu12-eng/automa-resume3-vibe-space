@@ -58,7 +58,53 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         return;
       }
 
+      console.log("[Settings] Saving settings:", settings);
+
+      // Save to local storage first
       await setSettings(settings);
+      console.log("[Settings] Settings saved to local storage");
+
+      // Also try to save to chrome.storage.sync via background script
+      if (typeof chrome !== "undefined" && chrome.runtime) {
+        try {
+          console.log(
+            "[Settings] Attempting to save settings to chrome.storage via background script...",
+          );
+          await new Promise<void>((resolve, reject) => {
+            chrome.runtime.sendMessage(
+              {
+                action: "saveSettings",
+                settings: settings,
+              },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  console.warn(
+                    "[Settings] Background script not available:",
+                    chrome.runtime.lastError?.message,
+                  );
+                  resolve(); // Don't fail if extension context not available
+                } else if (response?.success) {
+                  console.log(
+                    "[Settings] ✓ Settings saved to chrome.storage.sync",
+                  );
+                  resolve();
+                } else {
+                  console.warn(
+                    "[Settings] Background script failed to save settings",
+                  );
+                  resolve();
+                }
+              },
+            );
+          });
+        } catch (e) {
+          console.warn(
+            "[Settings] Could not save to chrome.storage via background script:",
+            e,
+          );
+        }
+      }
+
       setSaveSuccess(true);
 
       // Show processing message if user added custom sections
