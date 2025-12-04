@@ -301,14 +301,20 @@ export const TailorResume: React.FC = () => {
 
         {/* Error and Success Messages */}
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{error}</p>
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-destructive whitespace-pre-wrap font-medium">
+                {error}
+              </p>
+            </div>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 rounded-lg bg-green-600/10 border border-green-600/20">
-            <p className="text-sm text-green-600">{success}</p>
+          <div className="mb-6 p-4 rounded-lg bg-green-600/10 border border-green-600/20 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-green-600 font-medium">{success}</p>
           </div>
         )}
 
