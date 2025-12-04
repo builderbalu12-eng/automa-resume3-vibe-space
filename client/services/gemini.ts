@@ -35,6 +35,68 @@ export async function retryWithBackoff<T>(
   throw lastError || new Error("Max retry attempts exceeded");
 }
 
+// Calculate ATS score by comparing resume skills with job skills
+function calculateATSScore(
+  resume: ResumeData,
+  jobDescription: JobDescription,
+): ATSScore {
+  // Normalize all skills to lowercase for comparison
+  const resumeSkillsLower = resume.skills.map((s) => s.toLowerCase());
+  const jobSkillsLower = jobDescription.skills.map((s) => s.toLowerCase());
+
+  // Combine resume skills with experience and education text
+  const resumeText =
+    `${resume.summary || ""} ${resume.skills.join(" ")} ${
+      resume.experience
+        .map(
+          (e) => `${e.title} ${e.company} ${e.description.join(" ")}`,
+        )
+        .join(" ") || ""
+    } ${
+      resume.education
+        .map((e) => `${e.degree} ${e.field}`)
+        .join(" ") || ""
+    } ${
+      resume.projects
+        ?.map((p) => `${p.title} ${p.technologies.join(" ")}`)
+        .join(" ") || ""
+    }`.toLowerCase();
+
+  const jobText = `${jobDescription.description || ""} ${jobDescription.requirements.join(" ")} ${jobDescription.skills.join(" ")}`.toLowerCase();
+
+  // Find matching keywords
+  const matchedKeywords: string[] = [];
+  const missingKeywords: string[] = [];
+
+  for (const skill of jobSkillsLower) {
+    if (
+      resumeSkillsLower.includes(skill) ||
+      resumeText.includes(skill)
+    ) {
+      matchedKeywords.push(skill);
+    } else {
+      missingKeywords.push(skill);
+    }
+  }
+
+  // Calculate score based on matches
+  const matchPercentage =
+    jobSkillsLower.length > 0
+      ? Math.round((matchedKeywords.length / jobSkillsLower.length) * 100)
+      : 50;
+
+  return {
+    score: Math.min(100, Math.max(0, matchPercentage)),
+    matchPercentage,
+    keywordMatches: matchedKeywords,
+    missingKeywords,
+    improvements: missingKeywords.slice(0, 3).map(
+      (k) =>
+        `Add ${k} to your resume if you have experience with it`,
+    ),
+  };
+}
+
 let GEMINI_API_KEY = "";
 
 try {
