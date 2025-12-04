@@ -35,56 +35,260 @@ export async function retryWithBackoff<T>(
   throw lastError || new Error("Max retry attempts exceeded");
 }
 
-// Calculate ATS score by comparing resume skills with job skills
+// Helper function for fuzzy string matching
+function fuzzyMatch(str1: string, str2: string, threshold: number = 0.7): boolean {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+
+  if (s1 === s2) return true;
+  if (s1.length === 0 || s2.length === 0) return false;
+
+  // Check for substring matches
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+
+  // Simple Levenshtein-like distance for typos
+  const maxLen = Math.max(s1.length, s2.length);
+  const minLen = Math.min(s1.length, s2.length);
+
+  // Allow fuzzy match if one contains significant portion of the other
+  if (minLen / maxLen >= threshold) {
+    let matches = 0;
+    for (let i = 0; i < minLen; i++) {
+      if (s1[i] === s2[i]) matches++;
+    }
+    return matches / maxLen >= threshold;
+  }
+
+  return false;
+}
+
+// Helper function to generate keyword variations
+function expandKeywordVariations(keyword: string): string[] {
+  const variations = new Set<string>();
+  const lower = keyword.toLowerCase().trim();
+
+  variations.add(lower);
+
+  // Handle special characters
+  variations.add(lower.replace(/[#\+\.\-]/g, ""));
+  variations.add(lower.replace("+", " plus"));
+  variations.add(lower.replace("#", "sharp"));
+  variations.add(lower.replace(/[\.\-]/g, " "));
+
+  // Handle common abbreviations
+  const abbrevMap: Record<string, string[]> = {
+    "c++": ["cpp", "c plus plus"],
+    "c#": ["csharp", "c sharp"],
+    "node.js": ["nodejs", "node"],
+    "react.js": ["reactjs", "react"],
+    ".net": ["dot net", "dotnet"],
+    "asp.net": ["aspnet"],
+  };
+
+  for (const [abbrev, expansions] of Object.entries(abbrevMap)) {
+    if (lower.includes(abbrev)) {
+      expansions.forEach((exp) => variations.add(exp));
+    }
+  }
+
+  // Handle common technology patterns
+  if (lower.includes("javascript")) variations.add("js");
+  if (lower.includes("typescript")) variations.add("ts");
+  if (lower.includes("python")) variations.add("py");
+  if (lower.includes("java")) {
+    variations.add("java");
+    if (!lower.includes("script")) variations.add("java");
+  }
+
+  return Array.from(variations);
+}
+
+// Enhanced keyword matching with fuzzy matching
+function findKeywordMatches(
+  resumeText: string,
+  jobKeywords: string[],
+): { matched: string[]; missing: string[] } {
+  const matched: string[] = [];
+  const missing: string[] = [];
+
+  for (const keyword of jobKeywords) {
+    const variations = expandKeywordVariations(keyword);
+    const found = variations.some((v) =>
+      resumeText.includes(v) || fuzzyMatch(resumeText, v, 0.8)
+    );
+
+    if (found) {
+      matched.push(keyword);
+    } else {
+      missing.push(keyword);
+    }
+  }
+
+  return { matched, missing };
+}
+
+// Calculate ATS score with comprehensive factors
 export function calculateATSScore(
   resume: ResumeData,
   jobDescription: JobDescription,
 ): ATSScore {
-  // Normalize all skills to lowercase for comparison
-  const resumeSkillsLower = resume.skills.map((s) => s.toLowerCase());
-  const jobSkillsLower = jobDescription.skills.map((s) => s.toLowerCase());
-
-  // Combine resume skills with experience and education text
+  // Build complete resume text
   const resumeText = `${resume.summary || ""} ${resume.skills.join(" ")} ${
     resume.experience
       .map((e) => `${e.title} ${e.company} ${e.description.join(" ")}`)
       .join(" ") || ""
   } ${resume.education.map((e) => `${e.degree} ${e.field}`).join(" ") || ""} ${
     resume.projects
-      ?.map((p) => `${p.title} ${p.technologies.join(" ")}`)
+      ?.map((p) => `${p.title} ${p.description} ${p.technologies.join(" ")}`)
       .join(" ") || ""
-  }`.toLowerCase();
+  } ${Object.values(resume.customSections || {}).join(" ")}`.toLowerCase();
 
-  const jobText =
-    `${jobDescription.description || ""} ${jobDescription.requirements.join(" ")} ${jobDescription.skills.join(" ")}`.toLowerCase();
+  // Get all keywords from job description
+  const jobKeywords = [
+    ...jobDescription.skills,
+    ...jobDescription.requirements,
+  ];
 
-  // Find matching keywords
-  const matchedKeywords: string[] = [];
-  const missingKeywords: string[] = [];
+  // Find keyword matches
+  const { matched: matchedKeywords, missing: missingKeywords } =
+    findKeywordMatches(resumeText, jobKeywords);
 
-  for (const skill of jobSkillsLower) {
-    if (resumeSkillsLower.includes(skill) || resumeText.includes(skill)) {
-      matchedKeywords.push(skill);
-    } else {
-      missingKeywords.push(skill);
-    }
+  // Calculate base keyword match score (40% of total)
+  const keywordMatchPercentage =
+    jobKeywords.length > 0
+      ? (matchedKeywords.length / jobKeywords.length) * 100
+      : 50;
+  const keywordScore = Math.min(40, (keywordMatchPercentage / 100) * 40);
+
+  // Skills section score (10% of total)
+  let skillsScore = 0;
+  if (resume.skills.length >= 8) skillsScore = 10;
+  else if (resume.skills.length >= 5) skillsScore = 7;
+  else if (resume.skills.length > 0) skillsScore = 4;
+
+  // Experience quality score (25% of total)
+  let experienceScore = 0;
+  if (resume.experience.length > 0) {
+    let totalBullets = 0;
+    let bulletsWithMetrics = 0;
+
+    resume.experience.forEach((exp) => {
+      totalBullets += exp.description.length;
+      // Count bullets with quantifiable metrics
+      const metricsKeywords = ["%", "$", "improved", "increased", "reduced", "grew", "scaled", "built"];
+      bulletsWithMetrics += exp.description.filter((d) =>
+        metricsKeywords.some((k) => d.toLowerCase().includes(k)),
+      ).length;
+    });
+
+    if (resume.experience.length >= 3) experienceScore += 10;
+    else if (resume.experience.length >= 1) experienceScore += 5;
+
+    if (totalBullets >= 12) experienceScore += 15;
+    else if (totalBullets >= 8) experienceScore += 12;
+    else if (totalBullets >= 3) experienceScore += 8;
+
+    experienceScore = Math.min(25, experienceScore);
   }
 
-  // Calculate score based on matches
-  const matchPercentage =
-    jobSkillsLower.length > 0
-      ? Math.round((matchedKeywords.length / jobSkillsLower.length) * 100)
-      : 50;
+  // Education score (10% of total)
+  let educationScore = 0;
+  if (resume.education.length > 0) {
+    educationScore = 10;
+  }
+
+  // Summary/Professional score (10% of total)
+  let summaryScore = 0;
+  if (resume.summary && resume.summary.trim().length >= 100) {
+    summaryScore = 10;
+  } else if (resume.summary && resume.summary.trim().length >= 50) {
+    summaryScore = 5;
+  }
+
+  // Projects score (5% of total)
+  let projectsScore = 0;
+  if (resume.projects && resume.projects.length > 0) {
+    projectsScore = Math.min(5, resume.projects.length * 2);
+  }
+
+  // Calculate total score
+  const totalScore = Math.min(
+    100,
+    Math.round(
+      keywordScore + skillsScore + experienceScore + educationScore + summaryScore + projectsScore,
+    ),
+  );
 
   return {
-    score: Math.min(100, Math.max(0, matchPercentage)),
-    matchPercentage,
+    score: Math.max(20, totalScore),
+    matchPercentage: Math.round(keywordMatchPercentage),
     keywordMatches: matchedKeywords,
     missingKeywords,
-    improvements: missingKeywords
-      .slice(0, 3)
-      .map((k) => `Add ${k} to your resume if you have experience with it`),
+    improvements: generateImprovementsFromMissing(
+      resume,
+      missingKeywords,
+      jobDescription,
+    ),
   };
+}
+
+// Generate improvements based on missing keywords and resume gaps
+function generateImprovementsFromMissing(
+  resume: ResumeData,
+  missingKeywords: string[],
+  jobDescription: JobDescription,
+): string[] {
+  const improvements: string[] = [];
+
+  // Check for missing critical keywords
+  if (missingKeywords.length > 0) {
+    const topMissing = missingKeywords.slice(0, 3);
+    improvements.push(
+      `Incorporate key skills: ${topMissing.join(", ")}`,
+    );
+  }
+
+  // Check experience quality
+  const weakExperience = resume.experience.filter((e) => e.description.length < 3);
+  if (weakExperience.length > 0) {
+    improvements.push(
+      `Expand experience descriptions with more bullet points and quantifiable achievements`,
+    );
+  }
+
+  // Check for metrics in experience
+  const noMetricsExp = resume.experience.filter((e) =>
+    !e.description.some((d) =>
+      ["improved", "increased", "reduced", "grew", "%", "$"].some((k) =>
+        d.toLowerCase().includes(k),
+      ),
+    ),
+  );
+  if (noMetricsExp.length > 0) {
+    improvements.push(
+      `Add quantifiable metrics and measurable results to experience descriptions`,
+    );
+  }
+
+  // Check summary
+  if (!resume.summary || resume.summary.trim().length < 100) {
+    improvements.push(
+      `Write a comprehensive professional summary highlighting relevant skills`,
+    );
+  }
+
+  // Check for job title match in experience
+  const jobTitleLower = jobDescription.title.toLowerCase();
+  const hasRelatedRole = resume.experience.some((e) =>
+    e.title.toLowerCase().includes(jobTitleLower.split(" ")[0]),
+  );
+  if (!hasRelatedRole && resume.experience.length > 0) {
+    improvements.push(
+      `Emphasize experience with roles similar to: ${jobDescription.title}`,
+    );
+  }
+
+  return improvements.slice(0, 5);
 }
 
 let GEMINI_API_KEY = "";
