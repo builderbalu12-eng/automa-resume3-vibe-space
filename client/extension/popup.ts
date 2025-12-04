@@ -102,12 +102,13 @@ async function getResumeFromLocalhost(): Promise<ResumeData | null> {
   });
 }
 
-// Load master resume on popup open
+// Load master resume on popup open - always fetch fresh data
 async function loadMasterResume(): Promise<ResumeData | null> {
   try {
     console.log("[Popup] Loading master resume...");
 
-    // Try 1: Get from chrome.storage.sync (works across extension contexts)
+    // Always try to get fresh data from chrome.storage.sync first
+    // This ensures we get the latest resume after re-uploads
     let resume = await getMasterResume();
     if (resume) {
       console.log(
@@ -145,6 +146,22 @@ async function loadMasterResume(): Promise<ResumeData | null> {
     console.error("[Popup] Error loading resume:", error);
     return null;
   }
+}
+
+// Listen for resume updates from the web app (content script broadcasts)
+function listenForResumeUpdates() {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "resumeUpdated") {
+      console.log("[Popup] Resume update notification received");
+      // Clear cached resume and reload
+      state.masterResume = null;
+      loadMasterResume().then(() => {
+        console.log("[Popup] Resume reloaded after update");
+        updateUI();
+      });
+    }
+    return true;
+  });
 }
 
 // Request page data from background service worker
