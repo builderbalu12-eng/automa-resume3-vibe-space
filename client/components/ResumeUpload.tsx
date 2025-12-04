@@ -10,7 +10,14 @@ interface ResumeUploadProps {
   onApiKeyMissing?: () => void;
 }
 
-type LoadingStep = "idle" | "validating-key" | "extracting" | "parsing" | "validating" | "complete" | "error";
+type LoadingStep =
+  | "idle"
+  | "validating-key"
+  | "extracting"
+  | "parsing"
+  | "validating"
+  | "complete"
+  | "error";
 
 export const ResumeUpload: React.FC<ResumeUploadProps> = ({
   onUploadSuccess,
@@ -63,7 +70,9 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
 
       if (!hasValidExtension) {
         setLoadingStep("error");
-        setError("❌ Invalid file format. Please upload a .docx, .txt, or .pdf file");
+        setError(
+          "❌ Invalid file format. Please upload a .docx, .txt, or .pdf file",
+        );
         return;
       }
 
@@ -221,9 +230,7 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() =>
-          loadingStep === "idle" && fileInputRef.current?.click()
-        }
+        onClick={() => loadingStep === "idle" && fileInputRef.current?.click()}
         className={`
           relative w-full rounded-lg border-2 border-dashed p-8
           transition-all duration-200
@@ -284,7 +291,9 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
           ) : (
             <>
               <div className="rounded-full bg-primary/20 p-6">
-                <div className={`animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent`} />
+                <div
+                  className={`animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent`}
+                />
               </div>
               <div className="text-center w-full">
                 <h3 className={`font-semibold text-lg ${getStepColor()}`}>
@@ -306,9 +315,7 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full ${
-                        loadingStep === "error"
-                          ? "bg-red-600"
-                          : "bg-primary"
+                        loadingStep === "error" ? "bg-red-600" : "bg-primary"
                       } transition-all duration-300`}
                       style={{ width: `${getStepProgress()}%` }}
                     />
