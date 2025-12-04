@@ -406,6 +406,7 @@ if (tailorBtn) {
       state.jobData = result.jobData;
       state.tailoredResume = result.tailoredResume;
       state.atsScore = result.atsScore;
+      state.masterAtsScore = result.masterAtsScore || null;
 
       // Log custom sections for debugging
       console.log(
