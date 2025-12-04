@@ -306,7 +306,33 @@ function updateUI() {
       if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
       if (jobCompanyEl)
         jobCompanyEl.textContent = state.jobData.company || "Unknown";
-      if (atsScoreEl) atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
+
+      // Calculate improvement
+      const masterScore = state.masterAtsScore?.score || 0;
+      const tailoredScore = state.atsScore?.score || 0;
+      const improvement = tailoredScore - masterScore;
+      const improvementColor = improvement >= 0 ? "#10b981" : "#ef4444";
+
+      // Display both scores with improvement
+      if (atsScoreEl) {
+        atsScoreEl.innerHTML = `
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="flex: 1;">
+              <div style="font-size: 11px; color: #999; margin-bottom: 2px;">Master</div>
+              <div style="font-size: 20px; font-weight: 700; color: #666;">${masterScore}%</div>
+            </div>
+            <div style="font-size: 18px; color: #ccc;">→</div>
+            <div style="flex: 1;">
+              <div style="font-size: 11px; color: #999; margin-bottom: 2px;">Tailored</div>
+              <div style="font-size: 20px; font-weight: 700; color: #667eea;">${tailoredScore}%</div>
+            </div>
+            <div style="padding: 4px 8px; background: ${improvementColor}20; border-radius: 4px; text-align: center; min-width: 50px;">
+              <div style="font-size: 10px; color: ${improvementColor}; font-weight: 600;">${improvement >= 0 ? "+" : ""}${improvement}%</div>
+            </div>
+          </div>
+        `;
+      }
+
       if (summaryEl) {
         summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
       }
