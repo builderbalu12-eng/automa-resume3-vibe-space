@@ -18,6 +18,14 @@ export const UploadResume: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    // Add timeout to prevent hanging (30 seconds)
+    const saveTimeout = setTimeout(() => {
+      setIsLoading(false);
+      setError(
+        "⏱️ Saving took too long. Your resume was processed, but failed to save to database. It's saved locally.\n\nYou can still proceed to tailor your resume.",
+      );
+    }, 30000);
+
     try {
       // Generate a unique user ID if not exists
       const userId = `user_${Date.now()}`;
@@ -30,13 +38,17 @@ export const UploadResume: React.FC = () => {
       try {
         await saveResume(uploadedResume);
       } catch (e) {
-        console.warn("Could not save resume:", e);
+        console.warn("Could not save resume to database:", e);
         // Continue anyway, data is in local storage
       }
 
+      clearTimeout(saveTimeout);
       setResume(uploadedResume);
     } catch (err) {
-      setError("Failed to save resume. Please try again.");
+      clearTimeout(saveTimeout);
+      setError(
+        "❌ Failed to process resume. Please try uploading again.\n\nMake sure your resume:\n• Contains valid contact information\n• Has at least one job experience\n• Includes education details",
+      );
       console.error("Error saving resume:", err);
     } finally {
       setIsLoading(false);
