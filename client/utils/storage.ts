@@ -246,15 +246,14 @@ export async function getSettings(): Promise<AppSettings | null> {
           });
         });
 
-        if (
-          directResult &&
-          directResult[STORAGE_KEYS.APP_SETTINGS]
-        ) {
+        if (directResult && directResult[STORAGE_KEYS.APP_SETTINGS]) {
           const value = directResult[STORAGE_KEYS.APP_SETTINGS];
-          console.log("[Storage] Found value in chrome.storage.sync (raw):", value);
+          console.log(
+            "[Storage] Found value in chrome.storage.sync (raw):",
+            value,
+          );
 
-          const parsed =
-            typeof value === "string" ? JSON.parse(value) : value;
+          const parsed = typeof value === "string" ? JSON.parse(value) : value;
           console.log(
             "[Storage] ✓ Settings loaded and parsed from chrome.storage.sync:",
             parsed,
