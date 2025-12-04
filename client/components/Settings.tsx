@@ -85,7 +85,10 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
           "[Settings] ✓ Settings sent to content script (async - will save to chrome.storage.sync)",
         );
       } catch (e) {
-        console.warn("[Settings] Could not send settings to content script:", e);
+        console.warn(
+          "[Settings] Could not send settings to content script:",
+          e,
+        );
       }
 
       setSaveSuccess(true);
