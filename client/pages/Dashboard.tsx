@@ -130,49 +130,33 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-primary rounded-2xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity" />
-                <div className="relative bg-card rounded-2xl p-8 border border-border shadow-glow hover:shadow-lg transition-all duration-300">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">
-                        {masterResume?.contact.name ?? "John Doe"}
-                      </h3>
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        <p>
-                          {masterResume?.contact.email ??
-                            "john.doe@example.com"}
-                        </p>
-                        <p>{masterResume?.contact.phone ?? "(555) 555-5555"}</p>
-                        <p>
-                          {masterResume?.contact.location ??
-                            "San Francisco, CA"}
+            {masterResume && (
+              <div className="hidden md:block">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-primary rounded-2xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity" />
+                  <div className="relative bg-card rounded-2xl p-8 border border-border shadow-glow hover:shadow-lg transition-all duration-300">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-xl font-bold mb-2">
+                          {masterResume.contact.name}
+                        </h3>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <p>{masterResume.contact.email}</p>
+                          <p>{masterResume.contact.phone}</p>
+                          <p>{masterResume.contact.location}</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-border pt-4">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {masterResume.summary}
                         </p>
                       </div>
-                    </div>
 
-                    <div className="border-t border-border pt-4">
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {masterResume?.summary ??
-                          "Experienced software engineer with a track record of building scalable web applications and improving product metrics."}
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-semibold mb-3">Top Skills</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {(
-                          masterResume?.skills ?? [
-                            "JavaScript",
-                            "React",
-                            "Node.js",
-                            "TypeScript",
-                            "AWS",
-                          ]
-                        )
-                          .slice(0, 6)
-                          .map((s) => (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-3">Top Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {masterResume.skills.slice(0, 6).map((s) => (
                             <span
                               key={s}
                               className="px-3 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -180,74 +164,51 @@ export const Dashboard: React.FC = () => {
                               {s}
                             </span>
                           ))}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-border pt-4">
-                      <h4 className="text-sm font-semibold mb-3">
-                        Recent Role
-                      </h4>
-                      {(masterResume?.experience &&
-                      masterResume.experience.length
-                        ? masterResume.experience.slice(0, 1)
-                        : [
-                            {
-                              title: "Senior Software Engineer",
-                              company: "Acme Corp",
-                              startDate: "Jan 2020",
-                              endDate: "Present",
-                              description: [
-                                "Led a team to build a customer-facing web app.",
-                                "Improved load times by 40% through optimizations.",
-                              ],
-                            },
-                          ]
-                      ).map((exp) => (
-                        <div key={exp.title} className="text-sm space-y-2">
-                          <div>
-                            <div className="font-semibold">{exp.title}</div>
-                            <div className="text-muted-foreground text-xs">
-                              {exp.company} • {exp.startDate}{" "}
-                              {exp.endDate ? `– ${exp.endDate}` : "– Present"}
-                            </div>
-                          </div>
-                          <ul className="list-disc list-inside text-muted-foreground text-xs space-y-1">
-                            {exp.description.slice(0, 2).map((d, i) => (
-                              <li key={i}>{d}</li>
-                            ))}
-                          </ul>
                         </div>
-                      ))}
-                    </div>
+                      </div>
 
-                    <div className="flex gap-2 pt-4">
-                      {masterResume ? (
+                      <div className="border-t border-border pt-4">
+                        <h4 className="text-sm font-semibold mb-3">
+                          Recent Role
+                        </h4>
+                        {masterResume.experience.slice(0, 1).map((exp) => (
+                          <div key={exp.title} className="text-sm space-y-2">
+                            <div>
+                              <div className="font-semibold">{exp.title}</div>
+                              <div className="text-muted-foreground text-xs">
+                                {exp.company} • {exp.startDate}{" "}
+                                {exp.endDate ? `– ${exp.endDate}` : "– Present"}
+                              </div>
+                            </div>
+                            <ul className="list-disc list-inside text-muted-foreground text-xs space-y-1">
+                              {exp.description.slice(0, 2).map((d, i) => (
+                                <li key={i}>{d}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 pt-4">
                         <Link
                           to="/tailor"
                           className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
                         >
                           Tailor Resume
                         </Link>
-                      ) : (
+
                         <Link
                           to="/upload"
-                          className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+                          className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
                         >
-                          Upload Resume
+                          Upload New
                         </Link>
-                      )}
-
-                      <Link
-                        to="/upload"
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
-                      >
-                        Upload New
-                      </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
