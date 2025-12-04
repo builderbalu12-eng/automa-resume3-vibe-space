@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
 import { parseFile, validateResume } from "@/services/resumeParser";
 import { ResumeData } from "@/types";
 import { getApiKeyFromSettings } from "@/utils/storage";
@@ -10,6 +10,8 @@ interface ResumeUploadProps {
   onApiKeyMissing?: () => void;
 }
 
+type LoadingStep = "idle" | "validating-key" | "extracting" | "parsing" | "validating" | "complete" | "error";
+
 export const ResumeUpload: React.FC<ResumeUploadProps> = ({
   onUploadSuccess,
   isLoading = false,
@@ -17,7 +19,10 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
+  const [loadingMessage, setLoadingMessage] = useState("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const validateApiKey = async (): Promise<boolean> => {
     try {
