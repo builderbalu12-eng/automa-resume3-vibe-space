@@ -545,6 +545,23 @@ export const TailorResume: React.FC = () => {
                   <>�� Tailor Resume</>
                 )}
               </button>
+
+              {isTailoring && (
+                <div className="mt-4 p-4 rounded-lg bg-blue-600/10 border border-blue-600/20">
+                  <div className="flex items-start gap-3">
+                    <Loader2 className="h-4 w-4 text-blue-600 animate-spin flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Processing your resume</p>
+                      <p className="text-xs text-blue-600/70 mt-1">
+                        Analyzing job requirements and tailoring your resume for maximum ATS compatibility...
+                      </p>
+                      <p className="text-xs text-blue-600/70 mt-2">
+                        This may take 20-60 seconds depending on the job description length.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Results */}
