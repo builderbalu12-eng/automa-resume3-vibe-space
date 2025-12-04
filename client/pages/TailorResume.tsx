@@ -109,14 +109,14 @@ export const TailorResume: React.FC = () => {
 
   const handleTailor = async () => {
     if (!masterResume || !jobDescription.trim()) {
-      setError("Please enter a job description");
+      setError("❌ Please enter a job description before tailoring");
       return;
     }
 
     // Validate API key first
     if (!hasApiKey) {
       setError(
-        "⚠️ API Key Required. Please configure your Gemini API key in Settings before analyzing resumes.",
+        "🔑 API Key Required\n\nPlease configure your Gemini API key in Settings (⚙️ button in top-right) before analyzing resumes.",
       );
       setShowSettings(true);
       return;
@@ -126,6 +126,14 @@ export const TailorResume: React.FC = () => {
     setError(null);
     setSuccess(null);
     setMissingContentSections([]);
+
+    // Add timeout for tailoring (120 seconds)
+    const tailorTimeout = setTimeout(() => {
+      setIsTailoring(false);
+      setError(
+        "⏱️ Resume tailoring took too long (2+ minutes).\n\nThis might be due to:\n• High API load\n• Poor internet connection\n• Job description too long\n\nPlease try:\n1. Shortening the job description\n2. Checking your internet connection\n3. Trying again in a few moments",
+      );
+    }, 120000);
 
     try {
       // Extract job requirements from JD
@@ -148,6 +156,7 @@ export const TailorResume: React.FC = () => {
       // Check for missing sections if configured sections exist
       const missing = checkMissingContentSections(tailored, configuredSections);
 
+      clearTimeout(tailorTimeout);
       setTailorState({
         tailored,
         atsScore: atsData.score,
@@ -155,9 +164,9 @@ export const TailorResume: React.FC = () => {
       });
 
       setMissingContentSections(missing);
-      setSuccess(`✓ Resume tailored! ATS Score: ${atsData.score}%`);
+      setSuccess(`✅ Resume tailored! ATS Score: ${atsData.score}%`);
     } catch (err) {
-      // Handle extension context invalidation error
+      clearTimeout(tailorTimeout);
       const errorMessage = err instanceof Error ? err.message : String(err);
 
       if (
@@ -165,20 +174,16 @@ export const TailorResume: React.FC = () => {
         errorMessage.includes("chrome.runtime.lastError")
       ) {
         setError(
-          `⚠️ Extension was reloaded.
-
-Please try one of the following:
-1. Refresh this page and try again
-2. Clear cookies and site data:
-   - Click the lock icon (or site info icon) on the left side of the address bar
-   - Click "Cookies and site data"
-   - Click "Remove" or "Clear"
-   - Refresh the page
-
-Then re-enable the extension and try again.`,
+          `⚠️ Browser extension issue detected.\n\nPlease:\n1. Refresh this page\n2. If error persists, clear browser cache\n3. Try again\n\nIf the issue continues, contact support.`,
+        );
+      } else if (errorMessage.includes("API") || errorMessage.includes("key")) {
+        setError(
+          `🔑 API Error:\n\n${errorMessage}\n\nPlease check your Gemini API key in Settings.`,
         );
       } else {
-        setError(`Failed to tailor resume: ${errorMessage || "Unknown error"}`);
+        setError(
+          `❌ Tailoring failed:\n\n${errorMessage || "Unknown error occurred"}\n\nPlease try:\n1. Checking your internet connection\n2. Verifying the job description format\n3. Trying again in a moment`,
+        );
       }
     } finally {
       setIsTailoring(false);
