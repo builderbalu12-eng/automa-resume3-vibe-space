@@ -19,6 +19,7 @@ let state: PopupState = {
   jobData: null,
   tailoredResume: null,
   atsScore: null,
+  masterAtsScore: null,
   isJobPosting: null,
 };
 
