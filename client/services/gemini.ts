@@ -36,7 +36,11 @@ export async function retryWithBackoff<T>(
 }
 
 // Helper function for fuzzy string matching
-function fuzzyMatch(str1: string, str2: string, threshold: number = 0.7): boolean {
+function fuzzyMatch(
+  str1: string,
+  str2: string,
+  threshold: number = 0.7,
+): boolean {
   const s1 = str1.toLowerCase().trim();
   const s2 = str2.toLowerCase().trim();
 
@@ -113,8 +117,8 @@ function findKeywordMatches(
 
   for (const keyword of jobKeywords) {
     const variations = expandKeywordVariations(keyword);
-    const found = variations.some((v) =>
-      resumeText.includes(v) || fuzzyMatch(resumeText, v, 0.8)
+    const found = variations.some(
+      (v) => resumeText.includes(v) || fuzzyMatch(resumeText, v, 0.8),
     );
 
     if (found) {
@@ -175,7 +179,16 @@ export function calculateATSScore(
     resume.experience.forEach((exp) => {
       totalBullets += exp.description.length;
       // Count bullets with quantifiable metrics
-      const metricsKeywords = ["%", "$", "improved", "increased", "reduced", "grew", "scaled", "built"];
+      const metricsKeywords = [
+        "%",
+        "$",
+        "improved",
+        "increased",
+        "reduced",
+        "grew",
+        "scaled",
+        "built",
+      ];
       bulletsWithMetrics += exp.description.filter((d) =>
         metricsKeywords.some((k) => d.toLowerCase().includes(k)),
       ).length;
@@ -215,7 +228,12 @@ export function calculateATSScore(
   const totalScore = Math.min(
     100,
     Math.round(
-      keywordScore + skillsScore + experienceScore + educationScore + summaryScore + projectsScore,
+      keywordScore +
+        skillsScore +
+        experienceScore +
+        educationScore +
+        summaryScore +
+        projectsScore,
     ),
   );
 
@@ -243,13 +261,13 @@ function generateImprovementsFromMissing(
   // Check for missing critical keywords
   if (missingKeywords.length > 0) {
     const topMissing = missingKeywords.slice(0, 3);
-    improvements.push(
-      `Incorporate key skills: ${topMissing.join(", ")}`,
-    );
+    improvements.push(`Incorporate key skills: ${topMissing.join(", ")}`);
   }
 
   // Check experience quality
-  const weakExperience = resume.experience.filter((e) => e.description.length < 3);
+  const weakExperience = resume.experience.filter(
+    (e) => e.description.length < 3,
+  );
   if (weakExperience.length > 0) {
     improvements.push(
       `Expand experience descriptions with more bullet points and quantifiable achievements`,
@@ -257,12 +275,13 @@ function generateImprovementsFromMissing(
   }
 
   // Check for metrics in experience
-  const noMetricsExp = resume.experience.filter((e) =>
-    !e.description.some((d) =>
-      ["improved", "increased", "reduced", "grew", "%", "$"].some((k) =>
-        d.toLowerCase().includes(k),
+  const noMetricsExp = resume.experience.filter(
+    (e) =>
+      !e.description.some((d) =>
+        ["improved", "increased", "reduced", "grew", "%", "$"].some((k) =>
+          d.toLowerCase().includes(k),
+        ),
       ),
-    ),
   );
   if (noMetricsExp.length > 0) {
     improvements.push(
