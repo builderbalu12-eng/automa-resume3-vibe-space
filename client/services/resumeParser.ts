@@ -500,20 +500,30 @@ export function validateResume(resume: ResumeData): {
     errors.push("Missing email");
   }
 
-  if (!resume.contact.phone?.trim()) {
-    errors.push("Missing phone");
+  // Phone is optional if email exists
+  if (
+    !resume.contact.phone?.trim() &&
+    !resume.contact.email?.trim()
+  ) {
+    errors.push("Missing contact information (phone or email)");
   }
 
-  if (resume.skills.length === 0) {
+  // Skills must exist
+  if (!resume.skills || resume.skills.length === 0) {
     errors.push("No skills listed");
   }
 
-  if (resume.experience.length === 0) {
+  // Experience must exist
+  if (!resume.experience || resume.experience.length === 0) {
     errors.push("No experience listed");
   }
 
-  if (resume.education.length === 0) {
-    errors.push("No education listed");
+  // Education is optional if experience exists
+  if (
+    (!resume.education || resume.education.length === 0) &&
+    (!resume.experience || resume.experience.length === 0)
+  ) {
+    errors.push("No education or experience listed");
   }
 
   return {
