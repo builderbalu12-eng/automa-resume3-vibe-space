@@ -980,12 +980,19 @@ export async function analyzeJobAndTailorResume(
   "jobSummary": "summary with match percentage"
 }
 
-Instructions:
-- Extract ALL job skills and requirements from the posting
-- Calculate ATS score (0-100) based on skill and keyword matches
+Instructions for ATS Scoring:
+- Extract ALL job skills and requirements from the posting (be thorough, aim for 15+ keywords)
+- Calculate ATS score CAREFULLY:
+  * Base score on skill match percentage (primary factor)
+  * Add bonus points if experience has metrics/numbers (improved, increased, %, $)
+  * Add bonus points for job title relevance in experience
+  * Ensure minimum score of 20 (every tailored resume is better than untailored)
+  * For well-tailored resumes (4+ relevant experience bullets, 2+ custom sections, clear skill alignment): score should be 75-85+
+  * For excellent tailored resumes (5+ experience bullets with metrics, multiple projects, strong summary): score should be 80-90+
 - For tailoredProjects: provide 3-4 detailed sentences describing project impact, relevant technologies, and quantified results
-- For tailoredExperience: write impact-driven bullets with metrics where possible
+- For tailoredExperience: write impact-driven bullets with metrics where possible, incorporate job keywords naturally
 - Order skills by relevance to job posting
+- atsMatchPercentage should reflect percentage of job keywords found in tailored resume
 
 Job posting:
 ${cleanHTML}
