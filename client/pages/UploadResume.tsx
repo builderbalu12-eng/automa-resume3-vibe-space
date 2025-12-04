@@ -34,6 +34,32 @@ export const UploadResume: React.FC = () => {
       // Save to local storage
       await setMasterResume(uploadedResume);
 
+      // Notify Chrome extension that resume has been updated
+      // This will cause the extension popup to refresh its cached data
+      if (typeof chrome !== "undefined" && chrome.runtime) {
+        try {
+          chrome.runtime.sendMessage(
+            {
+              action: "resumeUpdated",
+              resume: uploadedResume,
+            },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                // Extension context may not be available, that's OK
+                console.warn(
+                  "Could not notify extension of update:",
+                  chrome.runtime.lastError.message,
+                );
+              } else {
+                console.log("[UploadResume] Extension notified of resume update");
+              }
+            },
+          );
+        } catch (e) {
+          console.warn("Error notifying extension:", e);
+        }
+      }
+
       // Save resume data
       try {
         await saveResume(uploadedResume);
