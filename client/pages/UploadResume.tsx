@@ -258,24 +258,18 @@ export const UploadResume: React.FC = () => {
                 🚀 Tailor Resume
               </button>
               <button
-                onClick={() => navigate("/history")}
+                onClick={() => {
+                  setResume(null);
+                }}
                 className="px-6 py-3 rounded-lg border border-border hover:bg-muted transition-colors font-semibold"
               >
-                📋 View History
+                📤 Upload New
               </button>
               <button
                 onClick={() => navigate("/")}
                 className="px-6 py-3 rounded-lg bg-background border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition-colors"
               >
                 Dashboard
-              </button>
-              <button
-                onClick={() => {
-                  setResume(null);
-                }}
-                className="px-6 py-3 rounded-lg border border-border hover:bg-muted transition-colors font-medium"
-              >
-                🔄 Replace Resume
               </button>
             </div>
           </div>
