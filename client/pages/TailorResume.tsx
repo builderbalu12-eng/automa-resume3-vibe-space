@@ -539,7 +539,7 @@ export const TailorResume: React.FC = () => {
                 {isTailoring ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Tailoring...
+                    Tailoring your resume...
                   </>
                 ) : (
                   <>�� Tailor Resume</>
