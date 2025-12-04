@@ -54,7 +54,7 @@ export const UploadResume: React.FC = () => {
                   );
                 } else {
                   console.log(
-                    "[UploadResume] Extension notified via chrome.runtime"
+                    "[UploadResume] Extension notified via chrome.runtime",
                   );
                 }
               },
@@ -62,7 +62,7 @@ export const UploadResume: React.FC = () => {
           } catch (e) {
             console.warn(
               "[UploadResume] Error using chrome.runtime.sendMessage:",
-              e
+              e,
             );
           }
         }
@@ -74,7 +74,7 @@ export const UploadResume: React.FC = () => {
             action: "resumeUpdated",
             resume: uploadedResume,
           },
-          "*"
+          "*",
         );
         console.log("[UploadResume] Resume update posted to content script");
       } catch (e) {

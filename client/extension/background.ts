@@ -16,19 +16,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       "[Background] Resume update notification received from web app",
     );
     // Broadcast to all extension contexts (popup, etc.)
-    chrome.runtime.sendMessage(
-      { action: "resumeUpdated" },
-      () => {
-        if (chrome.runtime.lastError) {
-          console.warn(
-            "[Background] Could not broadcast resumeUpdated:",
-            chrome.runtime.lastError.message,
-          );
-        } else {
-          console.log("[Background] Resume update broadcasted to extension");
-        }
-      },
-    );
+    chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn(
+          "[Background] Could not broadcast resumeUpdated:",
+          chrome.runtime.lastError.message,
+        );
+      } else {
+        console.log("[Background] Resume update broadcasted to extension");
+      }
+    });
     sendResponse({ success: true });
     return true;
   } else if (request.action === "saveSettings") {
