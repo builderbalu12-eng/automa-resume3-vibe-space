@@ -154,9 +154,63 @@ async function parseWithGemini(
 }
 
 function getResumeParsing(): string {
-  return `Extract ALL content from this resume and return valid JSON with: contact (name, email, phone, location, website), summary, skills (array), experience (array with title, company, startDate, endDate, description), education (array), plus any other sections found (certifications, achievements, publications, projects, etc.).
+  return `You are a resume parser. Extract ALL content from this resume and return valid JSON.
 
-Return ONLY valid JSON, no markdown.`;
+CRITICAL:
+- Extract ALL technical skills, programming languages, tools, and soft skills as a non-empty array
+- Extract ALL work experience/jobs/projects as a non-empty array with fields: title, company, startDate, endDate (use "Present" if current), description (array of bullet points)
+- If skills are listed inline with experience, extract them separately into skills array
+- If skills appear in projects or descriptions, extract them to skills array
+- Parse "Projects" section as experience entries if no work experience found
+- Handle various formats: bullet points, paragraphs, tables, or inline text
+
+Required JSON structure:
+{
+  "contact": {
+    "name": "Full Name",
+    "email": "email@example.com",
+    "phone": "phone number or empty string",
+    "location": "location or empty string",
+    "website": "optional",
+    "linkedin": "optional",
+    "github": "optional"
+  },
+  "summary": "2-3 sentence professional summary",
+  "skills": ["skill1", "skill2", "skill3", ...] (must be non-empty),
+  "experience": [
+    {
+      "title": "Job Title",
+      "company": "Company Name",
+      "location": "optional",
+      "startDate": "YYYY-MM or Month Year",
+      "endDate": "YYYY-MM, Month Year, or Present",
+      "isCurrentlyWorking": true/false,
+      "description": ["bullet point 1", "bullet point 2", ...]
+    }
+  ] (must be non-empty),
+  "education": [
+    {
+      "institution": "University/College Name",
+      "degree": "Bachelor/Master/PhD/Certification",
+      "field": "Field of Study",
+      "graduationDate": "YYYY-MM or Month Year",
+      "gpa": "optional",
+      "achievements": ["optional achievement"]
+    }
+  ],
+  "certifications": ["cert1", "cert2"],
+  "achievements": ["achievement1"],
+  "publications": ["publication1"],
+  "hobbies": ["hobby1"]
+}
+
+If any section is missing from the resume, create reasonable defaults:
+- If no explicit skills section, extract all technical terms, languages, tools, and frameworks mentioned
+- If no work experience, look for projects, internships, freelance work, or academic projects
+- Ensure skills array has at least 5-10 items
+- Ensure experience array has at least 1-2 entries
+
+Return ONLY valid JSON, no markdown, no code blocks.`;
 }
 
 function buildResumeObject(parsed: any): ResumeData {
