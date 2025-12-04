@@ -228,25 +228,58 @@ export async function clearAllStorage(): Promise<void> {
 
 export async function getSettings(): Promise<AppSettings | null> {
   try {
+    console.log("[Storage] getSettings() called");
+    console.log("[Storage] Looking for key:", STORAGE_KEYS.APP_SETTINGS);
+
     // Try to get from chrome.storage.sync first (extension context)
     if (typeof chrome !== "undefined" && chrome.storage) {
+      console.log("[Storage] chrome.storage available, attempting to read...");
       try {
-        const stored = await getFromStorage(STORAGE_KEYS.APP_SETTINGS);
-        if (stored) {
-          console.log("[Storage] Settings loaded from chrome.storage.sync");
-          return stored as AppSettings;
+        // Direct read from chrome.storage.sync for debugging
+        const directResult = await new Promise<any>((resolve) => {
+          chrome.storage.sync.get([STORAGE_KEYS.APP_SETTINGS], (result) => {
+            console.log(
+              "[Storage] Direct chrome.storage.sync.get result:",
+              result,
+            );
+            resolve(result);
+          });
+        });
+
+        if (
+          directResult &&
+          directResult[STORAGE_KEYS.APP_SETTINGS]
+        ) {
+          const value = directResult[STORAGE_KEYS.APP_SETTINGS];
+          console.log("[Storage] Found value in chrome.storage.sync (raw):", value);
+
+          const parsed =
+            typeof value === "string" ? JSON.parse(value) : value;
+          console.log(
+            "[Storage] ✓ Settings loaded and parsed from chrome.storage.sync:",
+            parsed,
+          );
+          return parsed as AppSettings;
+        } else {
+          console.warn(
+            "[Storage] chrome.storage.sync.get returned empty result for key:",
+            STORAGE_KEYS.APP_SETTINGS,
+          );
         }
       } catch (e) {
-        console.warn("[Storage] Failed to get from chrome.storage.sync:", e);
+        console.error("[Storage] Error reading from chrome.storage.sync:", e);
       }
+    } else {
+      console.warn("[Storage] chrome.storage not available in this context");
     }
 
     // Fallback: try localStorage (for web app context)
+    console.log("[Storage] Trying localStorage as fallback...");
     try {
       const localValue = localStorage.getItem(STORAGE_KEYS.APP_SETTINGS);
       if (localValue) {
         const parsed = JSON.parse(localValue);
-        console.log("[Storage] Settings loaded from localStorage");
+        console.log("[Storage] ✓ Settings loaded from localStorage:", parsed);
 
         // Try to sync to chrome.storage if available
         if (typeof chrome !== "undefined" && chrome.storage) {
@@ -259,15 +292,17 @@ export async function getSettings(): Promise<AppSettings | null> {
         }
 
         return parsed as AppSettings;
+      } else {
+        console.warn("[Storage] localStorage also doesn't have the key");
       }
     } catch (e) {
-      console.warn("[Storage] Failed to get from localStorage:", e);
+      console.warn("[Storage] Error reading from localStorage:", e);
     }
 
-    console.warn("[Storage] No settings found in any storage");
+    console.error("[Storage] No settings found in any storage!");
     return null;
   } catch (err) {
-    console.error("[Storage] Error getting settings:", err);
+    console.error("[Storage] Fatal error in getSettings():", err);
     return null;
   }
 }
