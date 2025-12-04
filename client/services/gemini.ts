@@ -760,29 +760,36 @@ export async function tailorResumeForJob(
       ? jobDescription.description.substring(0, 300)
       : "");
 
-  const prompt = `Tailor this resume for maximum impact for: ${jobDescription.title} at ${jobDescription.company}
+  const prompt = `Tailor this resume for MAXIMUM ATS compatibility and impact for: ${jobDescription.title} at ${jobDescription.company}
 
-Job details:
+CRITICAL JOB REQUIREMENTS:
 - Title: ${jobDescription.title}
 - Company: ${jobDescription.company}
 - Required Skills: ${jobSkills}
 - Key Requirements: ${jobRequirements}
 
-Resume:
+CANDIDATE RESUME:
 - Name: ${masterResume.contact.name}
 - Skills: ${masterResume.skills.join(", ")}
 - Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
 ${masterResume.projects && masterResume.projects.length > 0 ? `- Projects: ${masterResume.projects.map((p) => `${p.title} (${p.technologies?.join(", ")})`).join(" | ")}` : ""}
 
-Return ONLY valid JSON with enhanced content aligned to job requirements:
+RETURN ONLY VALID JSON:
 {
-  "tailoredSummary": "2-3 sentence summary highlighting most relevant experience for this specific role",
-  "tailoredExperience": [{"jobTitle": "original job title", "newBullets": ["impact-driven bullet with metrics", "bullet emphasizing job-relevant skills"]}],
-  "tailoredProjects": [{"title": "project title", "newDescription": "3-4 sentences describing project impact, technologies used that match job requirements, and measurable results"}],
-  "recommendedSkillsOrder": ["most relevant skill to job", "second most relevant skill"]
+  "tailoredSummary": "2-3 sentence summary highlighting the candidate's most relevant and directly applicable experience for this specific role. Must mention key skills from job posting.",
+  "tailoredExperience": [{"jobTitle": "original job title", "newBullets": ["highly specific, impact-driven bullet with quantifiable metrics (numbers, %, improved, achieved, etc.)", "second bullet incorporating specific job keywords and demonstrating relevant skill application", "third bullet showing direct alignment with job requirements"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "3-4 detailed sentences describing: (1) what problem the project solved, (2) the technologies used especially those matching job requirements, (3) measurable impact/results with specific metrics"}],
+  "recommendedSkillsOrder": ["most relevant skill to job posting", "second most relevant skill", "third most relevant skill"]
 }
 
-Important for projects: Provide 3-4 detailed sentences describing the project's impact, the technologies used (especially those mentioned in job posting), and quantified results where applicable.`;
+TAILORING REQUIREMENTS:
+- Each experience bullet must include quantifiable metrics (%, numbers, improved, achieved, scaled, etc.)
+- Incorporate job keywords naturally into experience descriptions
+- Projects must have 3-4 substantial sentences with specific technologies mentioned in job posting
+- Skills must be ordered by relevance to the job, with most relevant first
+- Summary must clearly connect candidate's experience to job requirements
+- Focus on specific achievements and results, not generic responsibilities
+- Every element should demonstrate direct fit for this specific role`;
 
   try {
     // Main tailor prompt with retry logic
