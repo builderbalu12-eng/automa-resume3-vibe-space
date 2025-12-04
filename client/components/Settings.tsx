@@ -65,64 +65,27 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       console.log("[Settings] Settings saved to local storage");
 
       // Try to save to chrome.storage.sync via the extension content script
-      // The web app is on localhost, so it needs the content script to relay messages
-      if (typeof chrome !== "undefined" && chrome.runtime) {
-        try {
-          console.log(
-            "[Settings] Attempting to save settings to chrome.storage via extension...",
-          );
+      // The web app on localhost uses window.postMessage to communicate with the content script
+      try {
+        console.log(
+          "[Settings] Attempting to save settings to chrome.storage via content script...",
+        );
 
-          // Try to send directly first (in case we're in an extension context)
-          const sendViaExtension = (): Promise<boolean> => {
-            return new Promise((resolve) => {
-              try {
-                chrome.runtime.sendMessage(
-                  {
-                    action: "saveSettings",
-                    settings: settings,
-                  },
-                  (response) => {
-                    if (chrome.runtime.lastError) {
-                      console.warn(
-                        "[Settings] Direct extension call not available:",
-                        chrome.runtime.lastError?.message,
-                      );
-                      resolve(false);
-                    } else if (response?.success) {
-                      console.log(
-                        "[Settings] ✓ Settings saved to chrome.storage.sync via extension",
-                      );
-                      resolve(true);
-                    } else {
-                      console.warn(
-                        "[Settings] Extension returned unsuccessful response:",
-                        response,
-                      );
-                      resolve(false);
-                    }
-                  },
-                );
-              } catch (e) {
-                console.warn("[Settings] Direct extension call failed:", e);
-                resolve(false);
-              }
-            });
-          };
+        // Send message to content script via window.postMessage
+        window.postMessage(
+          {
+            action: "saveSettings",
+            settings: settings,
+            source: "resumematch-web-app",
+          },
+          "*",
+        );
 
-          const success = await sendViaExtension();
-          if (!success) {
-            console.log(
-              "[Settings] Direct extension call didn't work (expected for web app context)",
-            );
-          }
-        } catch (e) {
-          console.warn(
-            "[Settings] Could not save to chrome.storage via extension:",
-            e,
-          );
-        }
-      } else {
-        console.log("[Settings] chrome.runtime not available - running in web-only mode");
+        console.log(
+          "[Settings] ✓ Settings sent to content script (async - will save to chrome.storage.sync)",
+        );
+      } catch (e) {
+        console.warn("[Settings] Could not send settings to content script:", e);
       }
 
       setSaveSuccess(true);
