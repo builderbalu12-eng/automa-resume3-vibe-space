@@ -43,6 +43,31 @@ window.addEventListener("message", (event) => {
         }
       },
     );
+  } else if (event.data.action === "resumeUpdated") {
+    console.log(
+      "[Content Script] Web app notifying resume update:",
+      event.data.resume?.contact?.name,
+    );
+
+    // Relay to background script to broadcast to popup
+    chrome.runtime.sendMessage(
+      {
+        action: "resumeUpdated",
+        resume: event.data.resume,
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "[Content Script] Error relaying resumeUpdated to background:",
+            chrome.runtime.lastError.message,
+          );
+        } else {
+          console.log(
+            "[Content Script] ✓ Resume update relayed to background script",
+          );
+        }
+      },
+    );
   }
 });
 
