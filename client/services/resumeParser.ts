@@ -501,10 +501,7 @@ export function validateResume(resume: ResumeData): {
   }
 
   // Phone is optional if email exists
-  if (
-    !resume.contact.phone?.trim() &&
-    !resume.contact.email?.trim()
-  ) {
+  if (!resume.contact.phone?.trim() && !resume.contact.email?.trim()) {
     errors.push("Missing contact information (phone or email)");
   }
 
