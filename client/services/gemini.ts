@@ -1137,7 +1137,7 @@ Important: Each section content should be specific, substantial (3-4 sentences),
       );
     }
 
-    // Build ATS score
+    // Build ATS score for tailored resume
     const atsScore: ATSScore = {
       score: Math.min(100, Math.max(0, parsed.atsScore || 0)),
       matchPercentage: Math.min(
@@ -1158,6 +1158,19 @@ Important: Each section content should be specific, substantial (3-4 sentences),
       ).filter((i: string) => i && i.trim()),
     };
 
+    // Calculate ATS score for master resume
+    const masterAtsScore = calculateATSScore(masterResume, jobData);
+    console.log(
+      "[Gemini] Master resume ATS score:",
+      masterAtsScore.score,
+      "%",
+    );
+    console.log(
+      "[Gemini] Tailored resume ATS score:",
+      atsScore.score,
+      "%",
+    );
+
     const summary =
       parsed.jobSummary ||
       `Match: ${atsScore.score}% for ${jobData.title} at ${jobData.company}`;
@@ -1166,6 +1179,7 @@ Important: Each section content should be specific, substantial (3-4 sentences),
       jobData,
       tailoredResume,
       atsScore,
+      masterAtsScore,
       summary,
     };
   } catch (error) {
