@@ -9,6 +9,7 @@ interface PopupState {
   jobData: JobDescription | null;
   tailoredResume: ResumeData | null;
   atsScore: ATSScore | null;
+  masterAtsScore: ATSScore | null;
   isJobPosting?: boolean | null;
 }
 
