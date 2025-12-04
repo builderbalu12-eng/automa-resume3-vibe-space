@@ -36,7 +36,7 @@ export async function retryWithBackoff<T>(
 }
 
 // Calculate ATS score by comparing resume skills with job skills
-function calculateATSScore(
+export function calculateATSScore(
   resume: ResumeData,
   jobDescription: JobDescription,
 ): ATSScore {
