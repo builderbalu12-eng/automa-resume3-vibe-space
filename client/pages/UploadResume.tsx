@@ -36,28 +36,49 @@ export const UploadResume: React.FC = () => {
 
       // Notify Chrome extension that resume has been updated
       // This will cause the extension popup to refresh its cached data
-      if (typeof chrome !== "undefined" && chrome.runtime) {
-        try {
-          chrome.runtime.sendMessage(
-            {
-              action: "resumeUpdated",
-              resume: uploadedResume,
-            },
-            (response) => {
-              if (chrome.runtime.lastError) {
-                // Extension context may not be available, that's OK
-                console.warn(
-                  "Could not notify extension of update:",
-                  chrome.runtime.lastError.message,
-                );
-              } else {
-                console.log("[UploadResume] Extension notified of resume update");
-              }
-            },
-          );
-        } catch (e) {
-          console.warn("Error notifying extension:", e);
+      try {
+        // Method 1: If we have chrome.runtime access (e.g., in extension context)
+        if (typeof chrome !== "undefined" && chrome.runtime) {
+          try {
+            chrome.runtime.sendMessage(
+              {
+                action: "resumeUpdated",
+                resume: uploadedResume,
+              },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  // Extension context may not be available, that's OK
+                  console.warn(
+                    "Could not notify extension via chrome.runtime:",
+                    chrome.runtime.lastError.message,
+                  );
+                } else {
+                  console.log(
+                    "[UploadResume] Extension notified via chrome.runtime"
+                  );
+                }
+              },
+            );
+          } catch (e) {
+            console.warn(
+              "[UploadResume] Error using chrome.runtime.sendMessage:",
+              e
+            );
+          }
         }
+
+        // Method 2: Send via window.postMessage so content script can relay it
+        window.postMessage(
+          {
+            source: "resumematch-web-app",
+            action: "resumeUpdated",
+            resume: uploadedResume,
+          },
+          "*"
+        );
+        console.log("[UploadResume] Resume update posted to content script");
+      } catch (e) {
+        console.warn("Error notifying extension:", e);
       }
 
       // Save resume data
