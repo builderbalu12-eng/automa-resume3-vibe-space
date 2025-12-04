@@ -245,9 +245,17 @@ export const TailorResume: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background py-12 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading your resume...</p>
+        <div className="text-center max-w-md">
+          <div className="rounded-full bg-primary/20 p-6 mx-auto mb-6 inline-block">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Loading your resume</h2>
+          <p className="text-muted-foreground mb-4">
+            Retrieving your master resume...
+          </p>
+          <div className="w-full max-w-xs mx-auto h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary animate-pulse" />
+          </div>
         </div>
       </div>
     );
