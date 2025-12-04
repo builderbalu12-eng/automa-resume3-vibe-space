@@ -213,7 +213,37 @@ function buildResumeObject(parsed: any): ResumeData {
   ];
   for (const key in parsed) {
     if (!standardKeys.includes(key) && parsed[key]) {
-      (resume as any)[key] = parsed[key];
+      let value = parsed[key];
+
+      // Normalize string arrays (publications, certifications, achievements, hobbies)
+      if (
+        Array.isArray(value) &&
+        ["publications", "certifications", "achievements", "hobbies"].includes(
+          key,
+        )
+      ) {
+        value = value.map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
+          // Handle object format (e.g., {title, date, publisher, link})
+          if (typeof item === "object" && item !== null) {
+            // Try to construct a meaningful string from the object
+            if (item.title) {
+              const parts = [item.title];
+              if (item.author) parts.push(`by ${item.author}`);
+              if (item.publisher) parts.push(`(${item.publisher})`);
+              if (item.date) parts.push(item.date);
+              return parts.join(" ");
+            } else if (item.name) {
+              return item.name;
+            }
+          }
+          return String(item);
+        });
+      }
+
+      (resume as any)[key] = value;
     }
   }
 
