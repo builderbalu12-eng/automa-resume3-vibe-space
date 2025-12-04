@@ -115,6 +115,13 @@ export const Dashboard: React.FC = () => {
                     >
                       View History
                     </Link>
+                    <Link
+                      to="/upload"
+                      className="inline-flex items-center justify-center px-8 py-4 rounded-lg border border-border text-foreground font-semibold hover:bg-muted transition-all"
+                    >
+                      <FileUp className="h-5 w-5 mr-2" />
+                      Upload New
+                    </Link>
                   </>
                 )}
               </div>
