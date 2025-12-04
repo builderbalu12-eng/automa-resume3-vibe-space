@@ -25,9 +25,12 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const validateApiKey = async (): Promise<boolean> => {
+    setLoadingStep("validating-key");
+    setLoadingMessage("Checking API configuration...");
     try {
       const apiKey = await getApiKeyFromSettings();
       if (!apiKey || apiKey.trim().length === 0) {
+        setLoadingStep("error");
         setError(
           "⚠️ API Key Required. Please configure your Gemini API key in Settings before uploading your resume.",
         );
@@ -39,41 +42,80 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
       return true;
     } catch (err) {
       console.error("Error validating API key:", err);
+      setLoadingStep("error");
       setError("Failed to validate API key. Please try again.");
       return false;
     }
   };
 
   const handleFile = async (file: File) => {
-    try {
-      // Validate API key first
-      const hasApiKey = await validateApiKey();
-      if (!hasApiKey) {
-        return;
-      }
+    // Clear any previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
+    try {
+      // Validate file extension first
       const validExtensions = [".docx", ".txt", ".pdf"];
       const hasValidExtension = validExtensions.some((ext) =>
         file.name.toLowerCase().endsWith(ext),
       );
 
       if (!hasValidExtension) {
-        setError("Please upload a .docx, .txt, or .pdf file");
+        setLoadingStep("error");
+        setError("❌ Invalid file format. Please upload a .docx, .txt, or .pdf file");
         return;
       }
 
       setError(null);
-      const resume = await parseFile(file);
-      const validation = validateResume(resume);
 
-      if (!validation.isValid) {
-        setError(`Resume issues: ${validation.errors.join(", ")}`);
+      // Validate API key
+      const hasApiKey = await validateApiKey();
+      if (!hasApiKey) {
         return;
       }
 
+      // Start timeout - if parsing takes longer than 90 seconds, show error
+      timeoutRef.current = setTimeout(() => {
+        setLoadingStep("error");
+        setError(
+          "⏱️ Resume parsing took too long. Please check your API key in Settings and try again.",
+        );
+      }, 90000);
+
+      setLoadingStep("extracting");
+      setLoadingMessage("Extracting text from your resume...");
+
+      const resume = await parseFile(file);
+
+      setLoadingStep("validating");
+      setLoadingMessage("Validating resume data...");
+
+      const validation = validateResume(resume);
+
+      if (!validation.isValid) {
+        setLoadingStep("error");
+        setError(
+          `❌ Resume validation failed:\n\n${validation.errors.map((e) => `• ${e}`).join("\n")}\n\nPlease ensure your resume contains all required sections.`,
+        );
+        return;
+      }
+
+      // Clear timeout on success
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      setLoadingStep("complete");
+      setLoadingMessage("Resume processed successfully!");
       onUploadSuccess(resume);
     } catch (err) {
-      // Handle extension context invalidation error
+      // Clear timeout on error
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      setLoadingStep("error");
       const errorMessage = err instanceof Error ? err.message : String(err);
 
       if (
@@ -81,26 +123,32 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
         errorMessage.includes("chrome.runtime.lastError")
       ) {
         setError(
-          `⚠️ Extension was reloaded.
-
-Please try one of the following:
-1. Refresh this page and try again
-2. Clear cookies and site data:
-   - Click the lock icon (or site info icon) on the left side of the address bar
-   - Click "Cookies and site data"
-   - Click "Remove" or "Clear"
-   - Refresh the page
-
-Then re-enable the extension and try again.`,
+          `⚠️ Browser extension issue detected.\n\nPlease try:\n1. Refresh this page\n2. If error persists, clear your browser cache\n3. Re-upload your resume\n\nIf the issue continues, contact support.`,
+        );
+      } else if (errorMessage.includes("API") || errorMessage.includes("key")) {
+        setError(
+          `🔑 API Configuration Error:\n\n${errorMessage}\n\nPlease check your Gemini API key in Settings.`,
+        );
+      } else if (errorMessage.includes("Could not extract")) {
+        setError(
+          `📄 File Processing Error:\n\n${errorMessage}\n\nTry uploading a different file or check the file format.`,
         );
       } else {
         setError(
-          errorMessage || "Failed to parse resume. Please try another file.",
+          `❌ Error: ${errorMessage || "Failed to parse resume. Please try another file."}`,
         );
       }
       console.error("Resume parsing error:", err);
     }
   };
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
