@@ -221,6 +221,9 @@ async function init() {
   try {
     console.log("[Popup] Initializing extension popup...");
 
+    // Set up listeners for updates
+    listenForResumeUpdates();
+
     // Load master resume (this is important)
     const resume = await loadMasterResume();
 
