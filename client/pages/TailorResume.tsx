@@ -143,7 +143,7 @@ export const TailorResume: React.FC = () => {
       );
 
       // Calculate ATS score
-      const atsData = await calculateATSScore(tailored, extracted);
+      const atsData = calculateATSScore(tailored, extracted);
 
       // Check for missing sections if configured sections exist
       const missing = checkMissingContentSections(tailored, configuredSections);
