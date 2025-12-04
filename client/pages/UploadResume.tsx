@@ -59,13 +59,23 @@ export const UploadResume: React.FC = () => {
     return (
       <div className="min-h-screen bg-background py-12">
         <div className="max-w-2xl mx-auto px-4">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </button>
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </button>
+            <button
+              onClick={() => {
+                setResume(null);
+              }}
+              className="px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors font-medium text-sm"
+            >
+              🔄 Replace Resume
+            </button>
+          </div>
 
           <div className="text-center py-12">
             <div className="flex justify-center mb-6">
