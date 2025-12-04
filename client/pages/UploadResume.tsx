@@ -221,10 +221,7 @@ export const UploadResume: React.FC = () => {
                             ? `${publication.title}${publication.publisher ? ` (${publication.publisher})` : ""}${publication.date ? ` - ${publication.date}` : ""}`
                             : String(publication);
                       return (
-                        <li
-                          key={i}
-                          className="text-sm text-muted-foreground"
-                        >
+                        <li key={i} className="text-sm text-muted-foreground">
                           📄 {pubText}
                         </li>
                       );
