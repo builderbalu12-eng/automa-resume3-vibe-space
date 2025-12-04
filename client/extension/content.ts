@@ -212,5 +212,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     }
     return true;
+  } else if (request.action === "saveSettings") {
+    console.log(
+      "[Content Script] Received saveSettings request, relaying to background script",
+    );
+    try {
+      // Relay the settings to the background script
+      chrome.runtime.sendMessage(
+        {
+          action: "saveSettings",
+          settings: request.settings,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Content Script] Error relaying saveSettings:",
+              chrome.runtime.lastError.message,
+            );
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError.message,
+            });
+          } else {
+            console.log(
+              "[Content Script] ✓ Settings relayed successfully to background script",
+            );
+            sendResponse(response || { success: true });
+          }
+        },
+      );
+    } catch (e) {
+      console.error("[Content Script] Failed to relay settings:", e);
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    return true; // async response
   }
 });
