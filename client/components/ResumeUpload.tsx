@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
 import { parseFile, validateResume } from "@/services/resumeParser";
 import { ResumeData } from "@/types";
 import { getApiKeyFromSettings } from "@/utils/storage";
@@ -10,6 +10,15 @@ interface ResumeUploadProps {
   onApiKeyMissing?: () => void;
 }
 
+type LoadingStep =
+  | "idle"
+  | "validating-key"
+  | "extracting"
+  | "parsing"
+  | "validating"
+  | "complete"
+  | "error";
+
 export const ResumeUpload: React.FC<ResumeUploadProps> = ({
   onUploadSuccess,
   isLoading = false,
@@ -17,12 +26,18 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
+  const [loadingMessage, setLoadingMessage] = useState("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const validateApiKey = async (): Promise<boolean> => {
+    setLoadingStep("validating-key");
+    setLoadingMessage("Checking API configuration...");
     try {
       const apiKey = await getApiKeyFromSettings();
       if (!apiKey || apiKey.trim().length === 0) {
+        setLoadingStep("error");
         setError(
           "⚠️ API Key Required. Please configure your Gemini API key in Settings before uploading your resume.",
         );
@@ -34,41 +49,82 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
       return true;
     } catch (err) {
       console.error("Error validating API key:", err);
+      setLoadingStep("error");
       setError("Failed to validate API key. Please try again.");
       return false;
     }
   };
 
   const handleFile = async (file: File) => {
-    try {
-      // Validate API key first
-      const hasApiKey = await validateApiKey();
-      if (!hasApiKey) {
-        return;
-      }
+    // Clear any previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
+    try {
+      // Validate file extension first
       const validExtensions = [".docx", ".txt", ".pdf"];
       const hasValidExtension = validExtensions.some((ext) =>
         file.name.toLowerCase().endsWith(ext),
       );
 
       if (!hasValidExtension) {
-        setError("Please upload a .docx, .txt, or .pdf file");
+        setLoadingStep("error");
+        setError(
+          "❌ Invalid file format. Please upload a .docx, .txt, or .pdf file",
+        );
         return;
       }
 
       setError(null);
-      const resume = await parseFile(file);
-      const validation = validateResume(resume);
 
-      if (!validation.isValid) {
-        setError(`Resume issues: ${validation.errors.join(", ")}`);
+      // Validate API key
+      const hasApiKey = await validateApiKey();
+      if (!hasApiKey) {
         return;
       }
 
+      // Start timeout - if parsing takes longer than 90 seconds, show error
+      timeoutRef.current = setTimeout(() => {
+        setLoadingStep("error");
+        setError(
+          "⏱️ Resume parsing took too long. Please check your API key in Settings and try again.",
+        );
+      }, 90000);
+
+      setLoadingStep("extracting");
+      setLoadingMessage("Extracting text from your resume...");
+
+      const resume = await parseFile(file);
+
+      setLoadingStep("validating");
+      setLoadingMessage("Validating resume data...");
+
+      const validation = validateResume(resume);
+
+      if (!validation.isValid) {
+        setLoadingStep("error");
+        setError(
+          `❌ Resume validation failed:\n\n${validation.errors.map((e) => `• ${e}`).join("\n")}\n\nPlease ensure your resume contains all required sections.`,
+        );
+        return;
+      }
+
+      // Clear timeout on success
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      setLoadingStep("complete");
+      setLoadingMessage("Resume processed successfully!");
       onUploadSuccess(resume);
     } catch (err) {
-      // Handle extension context invalidation error
+      // Clear timeout on error
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      setLoadingStep("error");
       const errorMessage = err instanceof Error ? err.message : String(err);
 
       if (
@@ -76,26 +132,32 @@ export const ResumeUpload: React.FC<ResumeUploadProps> = ({
         errorMessage.includes("chrome.runtime.lastError")
       ) {
         setError(
-          `⚠️ Extension was reloaded.
-
-Please try one of the following:
-1. Refresh this page and try again
-2. Clear cookies and site data:
-   - Click the lock icon (or site info icon) on the left side of the address bar
-   - Click "Cookies and site data"
-   - Click "Remove" or "Clear"
-   - Refresh the page
-
-Then re-enable the extension and try again.`,
+          `⚠️ Browser extension issue detected.\n\nPlease try:\n1. Refresh this page\n2. If error persists, clear your browser cache\n3. Re-upload your resume\n\nIf the issue continues, contact support.`,
+        );
+      } else if (errorMessage.includes("API") || errorMessage.includes("key")) {
+        setError(
+          `🔑 API Configuration Error:\n\n${errorMessage}\n\nPlease check your Gemini API key in Settings.`,
+        );
+      } else if (errorMessage.includes("Could not extract")) {
+        setError(
+          `📄 File Processing Error:\n\n${errorMessage}\n\nTry uploading a different file or check the file format.`,
         );
       } else {
         setError(
-          errorMessage || "Failed to parse resume. Please try another file.",
+          `❌ Error: ${errorMessage || "Failed to parse resume. Please try another file."}`,
         );
       }
       console.error("Resume parsing error:", err);
     }
   };
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -124,6 +186,34 @@ Then re-enable the extension and try again.`,
     }
   };
 
+  const getStepProgress = (): number => {
+    switch (loadingStep) {
+      case "validating-key":
+        return 20;
+      case "extracting":
+        return 40;
+      case "parsing":
+        return 60;
+      case "validating":
+        return 85;
+      case "complete":
+        return 100;
+      default:
+        return 0;
+    }
+  };
+
+  const getStepColor = (): string => {
+    switch (loadingStep) {
+      case "error":
+        return "text-red-600";
+      case "complete":
+        return "text-green-600";
+      default:
+        return "text-primary";
+    }
+  };
+
   return (
     <div className="w-full">
       <input
@@ -132,7 +222,7 @@ Then re-enable the extension and try again.`,
         accept=".docx,.txt,.pdf"
         onChange={handleChange}
         className="hidden"
-        disabled={isLoading}
+        disabled={isLoading || loadingStep !== "idle"}
       />
 
       <div
@@ -140,7 +230,7 @@ Then re-enable the extension and try again.`,
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => !isLoading && fileInputRef.current?.click()}
+        onClick={() => loadingStep === "idle" && fileInputRef.current?.click()}
         className={`
           relative w-full rounded-lg border-2 border-dashed p-8
           transition-all duration-200
@@ -149,28 +239,11 @@ Then re-enable the extension and try again.`,
               ? "border-primary bg-primary/5 scale-105"
               : "border-muted hover:border-primary/50"
           }
-          ${isLoading ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
+          ${loadingStep !== "idle" ? "opacity-90 cursor-not-allowed" : "cursor-pointer"}
         `}
       >
         <div className="flex flex-col items-center justify-center gap-6">
-          {isLoading ? (
-            <>
-              <div className="rounded-full bg-primary/20 p-6 animate-pulse">
-                <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent" />
-              </div>
-              <div className="text-center">
-                <h3 className="font-semibold text-lg text-primary">
-                  Uploading and processing your resume...
-                </h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Extracting and analyzing all sections of your resume
-                </p>
-                <div className="mt-4 w-48 h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary animate-pulse" />
-                </div>
-              </div>
-            </>
-          ) : (
+          {loadingStep === "idle" ? (
             <>
               <div className="rounded-full bg-primary/10 p-4">
                 <Upload className="h-8 w-8 text-primary" />
@@ -180,9 +253,77 @@ Then re-enable the extension and try again.`,
                   Upload Your Master Resume
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Drag and drop your resume or click to browse (.docx, .txt, or
-                  .pdf)
+                  Drag and drop your resume or click to browse
                 </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Supported formats: .docx, .txt, .pdf
+                </p>
+              </div>
+            </>
+          ) : loadingStep === "complete" ? (
+            <>
+              <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-4 animate-bounce">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-lg text-green-600">
+                  Resume Processed Successfully!
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your resume is ready to use
+                </p>
+              </div>
+            </>
+          ) : loadingStep === "error" ? (
+            <>
+              <div className="rounded-full bg-red-100 dark:bg-red-900/20 p-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <div className="text-center">
+                <h3 className={`font-semibold text-lg ${getStepColor()}`}>
+                  Processing Failed
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Please check the error message below and try again
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-full bg-primary/20 p-6">
+                <div
+                  className={`animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent`}
+                />
+              </div>
+              <div className="text-center w-full">
+                <h3 className={`font-semibold text-lg ${getStepColor()}`}>
+                  {loadingMessage || "Processing your resume..."}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {loadingStep === "validating-key" &&
+                    "Verifying API configuration..."}
+                  {loadingStep === "extracting" &&
+                    "Reading file and extracting text from your resume..."}
+                  {loadingStep === "parsing" &&
+                    "Using AI to parse and structure your resume data..."}
+                  {loadingStep === "validating" &&
+                    "Validating all resume sections..."}
+                </p>
+
+                {/* Progress bar */}
+                <div className="mt-6 w-full max-w-xs mx-auto">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        loadingStep === "error" ? "bg-red-600" : "bg-primary"
+                      } transition-all duration-300`}
+                      style={{ width: `${getStepProgress()}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {getStepProgress()}% complete
+                  </p>
+                </div>
               </div>
             </>
           )}
@@ -190,14 +331,24 @@ Then re-enable the extension and try again.`,
       </div>
 
       {error && (
-        <div className="mt-4 flex gap-3 rounded-lg bg-destructive/10 p-3 border border-destructive/20">
+        <div className="mt-4 flex gap-3 rounded-lg bg-destructive/10 p-4 border border-destructive/20">
           <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-destructive">{error}</p>
-            <p className="text-xs text-destructive/80 mt-1">
-              Please ensure your resume contains contact info, skills,
-              experience, and education.
+          <div className="flex-1">
+            <p className="text-sm font-medium text-destructive whitespace-pre-wrap">
+              {error}
             </p>
+            {loadingStep === "error" && (
+              <button
+                onClick={() => {
+                  setLoadingStep("idle");
+                  setError(null);
+                  fileInputRef.current?.click();
+                }}
+                className="text-xs text-destructive hover:underline mt-2 font-medium"
+              >
+                Try again →
+              </button>
+            )}
           </div>
         </div>
       )}

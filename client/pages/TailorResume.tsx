@@ -109,14 +109,14 @@ export const TailorResume: React.FC = () => {
 
   const handleTailor = async () => {
     if (!masterResume || !jobDescription.trim()) {
-      setError("Please enter a job description");
+      setError("❌ Please enter a job description before tailoring");
       return;
     }
 
     // Validate API key first
     if (!hasApiKey) {
       setError(
-        "⚠️ API Key Required. Please configure your Gemini API key in Settings before analyzing resumes.",
+        "🔑 API Key Required\n\nPlease configure your Gemini API key in Settings (⚙️ button in top-right) before analyzing resumes.",
       );
       setShowSettings(true);
       return;
@@ -126,6 +126,14 @@ export const TailorResume: React.FC = () => {
     setError(null);
     setSuccess(null);
     setMissingContentSections([]);
+
+    // Add timeout for tailoring (120 seconds)
+    const tailorTimeout = setTimeout(() => {
+      setIsTailoring(false);
+      setError(
+        "⏱️ Resume tailoring took too long (2+ minutes).\n\nThis might be due to:\n• High API load\n• Poor internet connection\n• Job description too long\n\nPlease try:\n1. Shortening the job description\n2. Checking your internet connection\n3. Trying again in a few moments",
+      );
+    }, 120000);
 
     try {
       // Extract job requirements from JD
@@ -148,6 +156,7 @@ export const TailorResume: React.FC = () => {
       // Check for missing sections if configured sections exist
       const missing = checkMissingContentSections(tailored, configuredSections);
 
+      clearTimeout(tailorTimeout);
       setTailorState({
         tailored,
         atsScore: atsData.score,
@@ -155,9 +164,9 @@ export const TailorResume: React.FC = () => {
       });
 
       setMissingContentSections(missing);
-      setSuccess(`✓ Resume tailored! ATS Score: ${atsData.score}%`);
+      setSuccess(`✅ Resume tailored! ATS Score: ${atsData.score}%`);
     } catch (err) {
-      // Handle extension context invalidation error
+      clearTimeout(tailorTimeout);
       const errorMessage = err instanceof Error ? err.message : String(err);
 
       if (
@@ -165,20 +174,16 @@ export const TailorResume: React.FC = () => {
         errorMessage.includes("chrome.runtime.lastError")
       ) {
         setError(
-          `⚠️ Extension was reloaded.
-
-Please try one of the following:
-1. Refresh this page and try again
-2. Clear cookies and site data:
-   - Click the lock icon (or site info icon) on the left side of the address bar
-   - Click "Cookies and site data"
-   - Click "Remove" or "Clear"
-   - Refresh the page
-
-Then re-enable the extension and try again.`,
+          `⚠️ Browser extension issue detected.\n\nPlease:\n1. Refresh this page\n2. If error persists, clear browser cache\n3. Try again\n\nIf the issue continues, contact support.`,
+        );
+      } else if (errorMessage.includes("API") || errorMessage.includes("key")) {
+        setError(
+          `🔑 API Error:\n\n${errorMessage}\n\nPlease check your Gemini API key in Settings.`,
         );
       } else {
-        setError(`Failed to tailor resume: ${errorMessage || "Unknown error"}`);
+        setError(
+          `❌ Tailoring failed:\n\n${errorMessage || "Unknown error occurred"}\n\nPlease try:\n1. Checking your internet connection\n2. Verifying the job description format\n3. Trying again in a moment`,
+        );
       }
     } finally {
       setIsTailoring(false);
@@ -240,9 +245,17 @@ Then re-enable the extension and try again.`,
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background py-12 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading your resume...</p>
+        <div className="text-center max-w-md">
+          <div className="rounded-full bg-primary/20 p-6 mx-auto mb-6 inline-block">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Loading your resume</h2>
+          <p className="text-muted-foreground mb-4">
+            Retrieving your master resume...
+          </p>
+          <div className="w-full max-w-xs mx-auto h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary animate-pulse" />
+          </div>
         </div>
       </div>
     );
@@ -288,14 +301,20 @@ Then re-enable the extension and try again.`,
 
         {/* Error and Success Messages */}
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{error}</p>
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-destructive whitespace-pre-wrap font-medium">
+                {error}
+              </p>
+            </div>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 rounded-lg bg-green-600/10 border border-green-600/20">
-            <p className="text-sm text-green-600">{success}</p>
+          <div className="mb-6 p-4 rounded-lg bg-green-600/10 border border-green-600/20 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-green-600 font-medium">{success}</p>
           </div>
         )}
 
@@ -520,12 +539,33 @@ Then re-enable the extension and try again.`,
                 {isTailoring ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Tailoring...
+                    Tailoring your resume...
                   </>
                 ) : (
                   <>�� Tailor Resume</>
                 )}
               </button>
+
+              {isTailoring && (
+                <div className="mt-4 p-4 rounded-lg bg-blue-600/10 border border-blue-600/20">
+                  <div className="flex items-start gap-3">
+                    <Loader2 className="h-4 w-4 text-blue-600 animate-spin flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">
+                        Processing your resume
+                      </p>
+                      <p className="text-xs text-blue-600/70 mt-1">
+                        Analyzing job requirements and tailoring your resume for
+                        maximum ATS compatibility...
+                      </p>
+                      <p className="text-xs text-blue-600/70 mt-2">
+                        This may take 20-60 seconds depending on the job
+                        description length.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Results */}
