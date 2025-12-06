@@ -32,7 +32,12 @@ export const UploadResume: React.FC = () => {
       await setUserId(userId);
 
       // Save to local storage
+      console.log(
+        "[UploadResume] Saving resume to storage:",
+        uploadedResume.contact.name,
+      );
       await setMasterResume(uploadedResume);
+      console.log("[UploadResume] Resume saved successfully to storage");
 
       // Notify Chrome extension that resume has been updated
       // This will cause the extension popup to refresh its cached data
@@ -40,6 +45,9 @@ export const UploadResume: React.FC = () => {
         // Method 1: If we have chrome.runtime access (e.g., in extension context)
         if (typeof chrome !== "undefined" && chrome.runtime) {
           try {
+            console.log(
+              "[UploadResume] Attempting to notify extension via chrome.runtime",
+            );
             chrome.runtime.sendMessage(
               {
                 action: "resumeUpdated",
@@ -49,12 +57,12 @@ export const UploadResume: React.FC = () => {
                 if (chrome.runtime.lastError) {
                   // Extension context may not be available, that's OK
                   console.warn(
-                    "Could not notify extension via chrome.runtime:",
+                    "[UploadResume] Could not notify extension via chrome.runtime:",
                     chrome.runtime.lastError.message,
                   );
                 } else {
                   console.log(
-                    "[UploadResume] Extension notified via chrome.runtime",
+                    "[UploadResume] ✓ Extension notified via chrome.runtime",
                   );
                 }
               },
@@ -68,6 +76,9 @@ export const UploadResume: React.FC = () => {
         }
 
         // Method 2: Send via window.postMessage so content script can relay it
+        console.log(
+          "[UploadResume] Posting resume update to content script via window.postMessage",
+        );
         window.postMessage(
           {
             source: "resumematch-web-app",
@@ -76,9 +87,11 @@ export const UploadResume: React.FC = () => {
           },
           "*",
         );
-        console.log("[UploadResume] Resume update posted to content script");
+        console.log(
+          "[UploadResume] ✓ Resume update posted to content script",
+        );
       } catch (e) {
-        console.warn("Error notifying extension:", e);
+        console.warn("[UploadResume] Error notifying extension:", e);
       }
 
       // Save resume data
