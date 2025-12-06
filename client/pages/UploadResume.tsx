@@ -4,7 +4,11 @@ import { ArrowLeft, CheckCircle } from "lucide-react";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { Settings } from "@/components/Settings";
 import { ResumeData } from "@/types";
-import { setMasterResume, setUserId, forceSyncMasterResume } from "@/utils/storage";
+import {
+  setMasterResume,
+  setUserId,
+  forceSyncMasterResume,
+} from "@/utils/storage";
 import { saveResume } from "@/services/mongodb";
 
 export const UploadResume: React.FC = () => {
@@ -37,7 +41,9 @@ export const UploadResume: React.FC = () => {
         uploadedResume.contact.name,
       );
       await forceSyncMasterResume(uploadedResume);
-      console.log("[UploadResume] Resume saved successfully to all storage locations");
+      console.log(
+        "[UploadResume] Resume saved successfully to all storage locations",
+      );
 
       // Notify Chrome extension that resume has been updated
       // This will cause the extension popup to refresh its cached data

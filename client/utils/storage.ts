@@ -248,7 +248,10 @@ export async function setMasterResume(resume: ResumeData): Promise<void> {
               const savedData = result[STORAGE_KEYS.MASTER_RESUME];
               if (savedData) {
                 try {
-                  const savedResume = typeof savedData === "string" ? JSON.parse(savedData) : savedData;
+                  const savedResume =
+                    typeof savedData === "string"
+                      ? JSON.parse(savedData)
+                      : savedData;
                   console.log(
                     `[Storage] ✓ Verification: chrome.storage.sync now contains resume for: ${savedResume.contact?.name}`,
                   );
@@ -256,7 +259,9 @@ export async function setMasterResume(resume: ResumeData): Promise<void> {
                   console.warn("[Storage] Could not verify saved data:", e);
                 }
               } else {
-                console.warn("[Storage] WARNING: Data was not found after saving!");
+                console.warn(
+                  "[Storage] WARNING: Data was not found after saving!",
+                );
               }
               resolve();
             });
@@ -297,7 +302,10 @@ export async function clearAllStorage(): Promise<void> {
     return new Promise((resolve, reject) => {
       chrome.storage.sync.remove(keys, () => {
         if (chrome.runtime.lastError) {
-          console.error("[Storage] Error clearing chrome.storage.sync:", chrome.runtime.lastError.message);
+          console.error(
+            "[Storage] Error clearing chrome.storage.sync:",
+            chrome.runtime.lastError.message,
+          );
           reject(chrome.runtime.lastError);
         } else {
           console.log("[Storage] ✓ All data cleared from chrome.storage.sync");
@@ -341,22 +349,33 @@ export async function forceSyncMasterResume(resume: ResumeData): Promise<void> {
               console.log("[Storage] ✓ Resume saved in force sync");
 
               // Step 4: Verify it was written
-              chrome.storage.sync.get([STORAGE_KEYS.MASTER_RESUME], (result) => {
-                const savedData = result[STORAGE_KEYS.MASTER_RESUME];
-                if (savedData) {
-                  try {
-                    const savedResume = typeof savedData === "string" ? JSON.parse(savedData) : savedData;
-                    console.log(
-                      `[Storage] ✓ Force sync verified: chrome.storage.sync now contains: ${savedResume.contact?.name}`,
+              chrome.storage.sync.get(
+                [STORAGE_KEYS.MASTER_RESUME],
+                (result) => {
+                  const savedData = result[STORAGE_KEYS.MASTER_RESUME];
+                  if (savedData) {
+                    try {
+                      const savedResume =
+                        typeof savedData === "string"
+                          ? JSON.parse(savedData)
+                          : savedData;
+                      console.log(
+                        `[Storage] ✓ Force sync verified: chrome.storage.sync now contains: ${savedResume.contact?.name}`,
+                      );
+                    } catch (e) {
+                      console.error(
+                        "[Storage] Could not verify force sync:",
+                        e,
+                      );
+                    }
+                  } else {
+                    console.error(
+                      "[Storage] Force sync FAILED - data not found after save!",
                     );
-                  } catch (e) {
-                    console.error("[Storage] Could not verify force sync:", e);
                   }
-                } else {
-                  console.error("[Storage] Force sync FAILED - data not found after save!");
-                }
-                resolve();
-              });
+                  resolve();
+                },
+              );
             },
           );
         }, 100); // Small delay to ensure remove completes
