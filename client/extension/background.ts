@@ -15,17 +15,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log(
       "[Background] Resume update notification received from web app",
     );
-    // Broadcast to all extension contexts (popup, etc.)
-    chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
-      if (chrome.runtime.lastError) {
-        console.warn(
-          "[Background] Could not broadcast resumeUpdated:",
-          chrome.runtime.lastError.message,
+    // Broadcast to all extension contexts that might be listening
+    // Note: We can't use chrome.runtime.sendMessage from service worker
+    // Instead, we'll broadcast to all tabs so they can relay the message
+    try {
+      chrome.tabs.query({}, (tabs) => {
+        console.log(
+          `[Background] Broadcasting resumeUpdated to ${tabs.length} tabs`,
         );
-      } else {
-        console.log("[Background] Resume update broadcasted to extension");
-      }
-    });
+        tabs.forEach((tab) => {
+          if (tab.id) {
+            chrome.tabs.sendMessage(
+              tab.id,
+              { action: "resumeUpdated" },
+              () => {
+                // Ignore errors - some tabs may not have content script
+                if (chrome.runtime.lastError) {
+                  // Silently ignore - this is expected for many tabs
+                }
+              },
+            );
+          }
+        });
+      });
+    } catch (e) {
+      console.warn("[Background] Error broadcasting resumeUpdated:", e);
+    }
     sendResponse({ success: true });
     return true;
   } else if (request.action === "saveSettings") {
