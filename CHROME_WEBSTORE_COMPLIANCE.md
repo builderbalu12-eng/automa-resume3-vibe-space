@@ -5,8 +5,10 @@ This document details all the fixes applied to meet Chrome Web Store policy requ
 ## ✅ Critical Issues Fixed
 
 ### 1. Host Permissions (CRITICAL)
+
 **Issue**: Extension had broad host permissions (`https://*/*`, `http://*/*`) which causes instant rejection
-**Fix**: 
+**Fix**:
+
 - Removed broad permissions
 - Limited to specific job posting sites:
   - `*://*.linkedin.com/*`
@@ -22,8 +24,10 @@ This document details all the fixes applied to meet Chrome Web Store policy requ
 **Location**: `public/manifest.json`
 
 ### 2. Content Script Execution (CRITICAL)
+
 **Issue**: Content script ran automatically on every page (`run_at: "document_end"`), violating user interaction requirement
 **Fix**:
+
 - Changed `run_at` to `"document_idle"` (cleaner execution timing)
 - Removed automatic button injection
 - Content script now only responds to explicit messages from the popup
@@ -33,47 +37,58 @@ This document details all the fixes applied to meet Chrome Web Store policy requ
 **Location**: `client/extension/content.ts` and `public/manifest.json`
 
 ### 3. Permissions (Medium Risk)
+
 **Issue**: Requested unnecessary "tabs" permission
 **Fix**:
+
 - Removed `"tabs"` from permissions list
 - Kept only essential: `["storage", "scripting", "downloads"]`
 
 **Location**: `public/manifest.json`
 
 ### 4. Extension Icons (Critical)
+
 **Issue**: Missing proper PNG icons in multiple sizes
 **Fix**:
+
 - Created PNG icons in required sizes:
   - `public/icons/icon-16.png` (16x16)
   - `public/icons/icon-48.png` (48x48)
   - `public/icons/icon-128.png` (128x128)
 - Updated manifest to reference PNG files instead of favicon.ico
 
-**Location**: 
+**Location**:
+
 - `public/icons/icon-16.png`
 - `public/icons/icon-48.png`
 - `public/icons/icon-128.png`
 - `public/manifest.json`
 
 ### 5. Privacy Policy
+
 **Issue**: Missing privacy policy URL in manifest
 **Fix**:
+
 - Added `"privacy_policy": "https://resume.zenlead.in/privacy-policy"` to manifest
 - **ACTION REQUIRED**: Ensure privacy policy is published at this URL before uploading to Chrome Web Store
 
 **Location**: `public/manifest.json`
 
 ### 6. Localhost Entries (Development)
+
 **Issue**: Manifest contained localhost entries (`http://localhost:*/*`, `http://127.0.0.1:*/*`) which are only allowed during development
 **Fix**:
+
 - Removed all localhost entries from manifest
 - Extension is now production-ready
 
 **Location**: `public/manifest.json`
 
 ### 7. web_accessible_resources (Security)
+
 **Issue**: Had `web_accessible_resources` exposing `popup.html` to all websites (`"matches": ["*://*/*"]`)
 **Fix**:
+
 - Completely removed `web_accessible_resources` section as it's not needed
 - Popup.html is accessed through the extension's own popup mechanism, not as a web resource
 
@@ -84,6 +99,7 @@ This document details all the fixes applied to meet Chrome Web Store policy requ
 All existing functionality has been preserved:
 
 ### Core Features Still Working:
+
 - ✓ Resume upload and storage
 - ✓ Job description analysis and extraction
 - ✓ Resume tailoring with AI (Google Gemini)
@@ -96,6 +112,7 @@ All existing functionality has been preserved:
 - ✓ Data synchronization between web app and extension
 
 ### User Interaction Flow:
+
 1. User clicks extension popup icon
 2. Popup loads and displays status
 3. User clicks "CustomAnalyse" button on popup
@@ -106,6 +123,7 @@ All existing functionality has been preserved:
 ## Implementation Details
 
 ### Manifest Changes Summary
+
 ```json
 // REMOVED
 - "https://*/*" and "http://*/*" from host_permissions
@@ -124,7 +142,9 @@ All existing functionality has been preserved:
 ```
 
 ### Content Script Changes
+
 The content script now:
+
 - Does NOT automatically inject buttons or extract data
 - Listens for explicit messages from background/popup
 - Only executes extraction when user requests it
@@ -149,6 +169,7 @@ Before uploading to Chrome Web Store, ensure:
 To test locally before submitting:
 
 1. Build the extension:
+
    ```bash
    npm run build:extension
    ```
@@ -168,22 +189,28 @@ To test locally before submitting:
 ## Additional Notes
 
 ### Data Privacy Compliance
+
 The extension handles user resume data and job descriptions. Ensure:
+
 - Data is processed securely
 - User data is not sent to unauthorized servers
 - Comply with applicable data protection laws
 - Consider GDPR/CCPA requirements if applicable
 
 ### Continued Support for Specific Sites
+
 If you need to add more job posting sites in the future:
+
 1. Add to `host_permissions` array in manifest.json
 2. Add to `content_scripts.matches` array
 3. Rebuild and test
 
 ### Optional Permissions
+
 If future features require additional permissions, use the `optional_permissions` field rather than requesting them at install time.
 
 ## References
+
 - Chrome Web Store Program Policies: https://chromewebstore.google.com/detail/policies
 - Manifest V3 Documentation: https://developer.chrome.com/docs/extensions/mv3/
 - Extension Samples: https://github.com/GoogleChrome/chrome-extensions-samples
