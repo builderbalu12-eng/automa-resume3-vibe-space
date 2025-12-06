@@ -317,9 +317,9 @@ export const Dashboard: React.FC = () => {
                 Recent Applications
               </h3>
               <div className="grid gap-4">
-                {recentApplications.map((app) => (
+                {recentApplications.map((app, idx) => (
                   <div
-                    key={app._id}
+                    key={app._id || app.id || `app-${idx}`}
                     className="group flex items-center justify-between p-5 rounded-lg border border-border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-300"
                   >
                     <div className="min-w-0 flex-1">
