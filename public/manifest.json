@@ -33,6 +33,7 @@
   "content_scripts": [
     {
       "matches": [
+        "*://resume.zenlead.in/*",
         "*://*.linkedin.com/*",
         "*://*.naukri.com/*",
         "*://*.indeed.com/*",
