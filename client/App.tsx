@@ -5,6 +5,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { UploadResume } from "./pages/UploadResume";
 import { TailorResume } from "./pages/TailorResume";
 import { History } from "./pages/History";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { NotFound } from "./pages/NotFound";
 import { Settings } from "./components/Settings";
 
