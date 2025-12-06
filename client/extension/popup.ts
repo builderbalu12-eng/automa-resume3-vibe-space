@@ -72,7 +72,10 @@ async function getResumeFromLocalhost(): Promise<ResumeData | null> {
         console.log("[Popup] Found", tabs.length, "localhost tab(s)");
         const tab = tabs[0];
 
-        console.log("[Popup] Sending getResume message to localhost tab:", tab.url);
+        console.log(
+          "[Popup] Sending getResume message to localhost tab:",
+          tab.url,
+        );
 
         chrome.tabs.sendMessage(
           tab.id!,

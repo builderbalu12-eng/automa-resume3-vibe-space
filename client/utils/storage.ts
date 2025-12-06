@@ -156,9 +156,7 @@ export async function getMasterResume(): Promise<ResumeData | null> {
       );
     }
   } else {
-    console.warn(
-      "[Storage] chrome.storage.sync not available in this context",
-    );
+    console.warn("[Storage] chrome.storage.sync not available in this context");
   }
 
   // Fallback to localStorage (web app context)

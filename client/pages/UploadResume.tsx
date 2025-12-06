@@ -87,9 +87,7 @@ export const UploadResume: React.FC = () => {
           },
           "*",
         );
-        console.log(
-          "[UploadResume] ✓ Resume update posted to content script",
-        );
+        console.log("[UploadResume] ✓ Resume update posted to content script");
       } catch (e) {
         console.warn("[UploadResume] Error notifying extension:", e);
       }
