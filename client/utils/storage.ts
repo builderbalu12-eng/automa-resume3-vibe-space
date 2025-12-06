@@ -231,37 +231,48 @@ export async function setMasterResume(resume: ResumeData): Promise<void> {
         return;
       }
 
-      // First, remove old data to ensure clean sync
-      chrome.storage.sync.remove([STORAGE_KEYS.MASTER_RESUME], () => {
-        if (chrome.runtime.lastError) {
-          console.warn(
-            "[Storage] Could not clear old resume from chrome.storage:",
-            chrome.runtime.lastError,
-          );
-        } else {
-          console.log("[Storage] Old resume cleared from chrome.storage.sync");
-        }
+      // IMPORTANT: Use chrome.storage.sync.set() with force flag to overwrite old data
+      // We do NOT use remove() first because it creates a race condition
+      // set() will automatically overwrite the existing value
+      console.log(
+        `[Storage] Saving resume to chrome.storage.sync (will overwrite existing data)...`,
+      );
 
-        // Then save the new resume
-        chrome.storage.sync.set(
-          { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
-          () => {
-            if (chrome.runtime.lastError) {
-              console.error(
-                "[Storage] Error saving resume to chrome.storage.sync:",
-                chrome.runtime.lastError.message,
-              );
-              // Log the error but still resolve since localStorage is saved
+      chrome.storage.sync.set(
+        { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Storage] Error saving resume to chrome.storage.sync:",
+              chrome.runtime.lastError.message,
+            );
+            // Log the error but still resolve since localStorage is saved
+            resolve();
+          } else {
+            console.log(
+              `[Storage] ✓ Resume successfully saved to chrome.storage.sync (${(resumeSize / 1024).toFixed(2)}KB)`,
+            );
+
+            // Verify the data was actually written
+            chrome.storage.sync.get([STORAGE_KEYS.MASTER_RESUME], (result) => {
+              const savedData = result[STORAGE_KEYS.MASTER_RESUME];
+              if (savedData) {
+                try {
+                  const savedResume = typeof savedData === "string" ? JSON.parse(savedData) : savedData;
+                  console.log(
+                    `[Storage] ✓ Verification: chrome.storage.sync now contains resume for: ${savedResume.contact?.name}`,
+                  );
+                } catch (e) {
+                  console.warn("[Storage] Could not verify saved data:", e);
+                }
+              } else {
+                console.warn("[Storage] WARNING: Data was not found after saving!");
+              }
               resolve();
-            } else {
-              console.log(
-                `[Storage] Resume saved to chrome.storage.sync (${(resumeSize / 1024).toFixed(2)}KB)`,
-              );
-              resolve();
-            }
-          },
-        );
-      });
+            });
+          }
+        },
+      );
     });
   }
 
