@@ -4,7 +4,12 @@
   "version": "1.0.0",
   "description": "AI-powered resume tailoring for job applications",
   "permissions": ["storage", "tabs", "scripting", "downloads"],
-  "host_permissions": ["https://*/*", "http://*/*"],
+  "host_permissions": [
+    "https://*.zenlead.in/*",
+    "https://resume.zenlead.in/*",
+    "https://*/*",
+    "http://*/*"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
