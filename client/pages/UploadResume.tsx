@@ -31,13 +31,13 @@ export const UploadResume: React.FC = () => {
       const userId = `user_${Date.now()}`;
       await setUserId(userId);
 
-      // Save to local storage
+      // Save to local storage with force sync to ensure chrome extension gets updated
       console.log(
         "[UploadResume] Saving resume to storage:",
         uploadedResume.contact.name,
       );
-      await setMasterResume(uploadedResume);
-      console.log("[UploadResume] Resume saved successfully to storage");
+      await forceSyncMasterResume(uploadedResume);
+      console.log("[UploadResume] Resume saved successfully to all storage locations");
 
       // Notify Chrome extension that resume has been updated
       // This will cause the extension popup to refresh its cached data
