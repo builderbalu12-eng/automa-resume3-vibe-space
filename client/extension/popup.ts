@@ -72,6 +72,8 @@ async function getResumeFromLocalhost(): Promise<ResumeData | null> {
         console.log("[Popup] Found", tabs.length, "localhost tab(s)");
         const tab = tabs[0];
 
+        console.log("[Popup] Sending getResume message to localhost tab:", tab.url);
+
         chrome.tabs.sendMessage(
           tab.id!,
           { action: "getResume" },
@@ -84,12 +86,15 @@ async function getResumeFromLocalhost(): Promise<ResumeData | null> {
               resolve(null);
             } else if (response?.resume) {
               console.log(
-                "[Popup] Got resume from localhost:",
+                "[Popup] ✓ Got resume from localhost:",
                 response.resume.contact?.name,
               );
               resolve(response.resume);
             } else {
-              console.warn("[Popup] No resume in localhost response");
+              console.warn(
+                "[Popup] No resume in localhost response:",
+                response,
+              );
               resolve(null);
             }
           },
