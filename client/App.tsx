@@ -35,6 +35,7 @@ function App() {
           <Route path="/upload" element={<UploadResume />} />
           <Route path="/tailor" element={<TailorResume />} />
           <Route path="/history" element={<History />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
