@@ -38,9 +38,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 chrome.runtime.lastError.message,
               );
             } else {
-              console.log(
-                "[Background] ✓ Resume saved to chrome.storage.sync",
-              );
+              console.log("[Background] ✓ Resume saved to chrome.storage.sync");
 
               // Verify the save was successful
               chrome.storage.sync.get(
@@ -71,21 +69,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
               // Notify any open extension UI (popup) to refresh
               try {
-                chrome.runtime.sendMessage(
-                  { action: "resumeUpdated" },
-                  () => {
-                    if (chrome.runtime.lastError) {
-                      console.log(
-                        "[Background] Popup not currently listening (this is OK, data is in storage):",
-                        chrome.runtime.lastError.message,
-                      );
-                    } else {
-                      console.log("[Background] ✓ Popup notified of resume update");
-                    }
-                  },
-                );
+                chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
+                  if (chrome.runtime.lastError) {
+                    console.log(
+                      "[Background] Popup not currently listening (this is OK, data is in storage):",
+                      chrome.runtime.lastError.message,
+                    );
+                  } else {
+                    console.log(
+                      "[Background] ✓ Popup notified of resume update",
+                    );
+                  }
+                });
               } catch (e) {
-                console.log("[Background] Could not notify popup (OK if not open):", e);
+                console.log(
+                  "[Background] Could not notify popup (OK if not open):",
+                  e,
+                );
               }
             }
           },
