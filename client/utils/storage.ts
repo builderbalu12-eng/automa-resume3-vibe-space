@@ -319,67 +319,79 @@ export async function clearAllStorage(): Promise<void> {
 export async function forceSyncMasterResume(resume: ResumeData): Promise<void> {
   console.log("[Storage] Force syncing master resume to all storage...");
 
-  // First, completely clear the old data
   const resumeJson = JSON.stringify(resume);
-  localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, resumeJson);
-  console.log("[Storage] Resume cleared and re-saved to localStorage");
+  const resumeSize = new Blob([resumeJson]).size;
 
-  // Then save to chrome.storage with explicit overwrite
+  // Step 1: Save to localStorage first (always works)
+  try {
+    localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, resumeJson);
+    console.log(
+      `[Storage] Resume saved to localStorage (${(resumeSize / 1024).toFixed(2)}KB)`,
+    );
+  } catch (e) {
+    console.warn("[Storage] Failed to save to localStorage:", e);
+  }
+
+  // Step 2: Save to chrome.storage.sync if available
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
     return new Promise<void>((resolve) => {
-      // Step 1: Remove any old data first
-      chrome.storage.sync.remove([STORAGE_KEYS.MASTER_RESUME], () => {
-        console.log("[Storage] Old resume removed from chrome.storage.sync");
+      // Check size first
+      if (resumeSize > 4 * 1024 * 1024) {
+        console.warn(
+          `[Storage] Resume too large for chrome.storage.sync: ${(resumeSize / 1024).toFixed(2)}KB`,
+        );
+        resolve();
+        return;
+      }
 
-        // Step 2: Wait a tiny bit to ensure remove completes
-        setTimeout(() => {
-          // Step 3: Save the new data
-          chrome.storage.sync.set(
-            { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
-            () => {
-              if (chrome.runtime.lastError) {
-                console.error(
-                  "[Storage] Error in force sync:",
-                  chrome.runtime.lastError.message,
+      console.log(
+        "[Storage] Setting resume to chrome.storage.sync (direct set, no remove)...",
+      );
+
+      // Direct set without remove first - this avoids race conditions
+      chrome.storage.sync.set(
+        { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Storage] Error saving to chrome.storage.sync:",
+              chrome.runtime.lastError.message,
+            );
+            resolve();
+            return;
+          }
+
+          console.log(
+            `[Storage] ✓ Resume saved to chrome.storage.sync (${(resumeSize / 1024).toFixed(2)}KB)`,
+          );
+
+          // Verify data was written
+          chrome.storage.sync.get(
+            [STORAGE_KEYS.MASTER_RESUME],
+            (verifyResult) => {
+              const savedData = verifyResult[STORAGE_KEYS.MASTER_RESUME];
+              if (savedData) {
+                try {
+                  const savedResume =
+                    typeof savedData === "string"
+                      ? JSON.parse(savedData)
+                      : savedData;
+                  console.log(
+                    `[Storage] ✓ Verified: chrome.storage.sync contains: ${savedResume.contact?.name}`,
+                  );
+                } catch (e) {
+                  console.warn("[Storage] Could not verify saved data:", e);
+                }
+              } else {
+                console.warn(
+                  "[Storage] ⚠️ WARNING: Data not found after saving!",
                 );
-                resolve();
-                return;
               }
-
-              console.log("[Storage] ✓ Resume saved in force sync");
-
-              // Step 4: Verify it was written
-              chrome.storage.sync.get(
-                [STORAGE_KEYS.MASTER_RESUME],
-                (result) => {
-                  const savedData = result[STORAGE_KEYS.MASTER_RESUME];
-                  if (savedData) {
-                    try {
-                      const savedResume =
-                        typeof savedData === "string"
-                          ? JSON.parse(savedData)
-                          : savedData;
-                      console.log(
-                        `[Storage] ✓ Force sync verified: chrome.storage.sync now contains: ${savedResume.contact?.name}`,
-                      );
-                    } catch (e) {
-                      console.error(
-                        "[Storage] Could not verify force sync:",
-                        e,
-                      );
-                    }
-                  } else {
-                    console.error(
-                      "[Storage] Force sync FAILED - data not found after save!",
-                    );
-                  }
-                  resolve();
-                },
-              );
+              resolve();
             },
           );
-        }, 100); // Small delay to ensure remove completes
-      });
+        },
+      );
     });
   }
 
