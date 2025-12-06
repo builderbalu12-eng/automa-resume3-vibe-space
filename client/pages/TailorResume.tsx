@@ -41,6 +41,7 @@ export const TailorResume: React.FC = () => {
     jobData: null,
   });
 
+  // Load resume on component mount and when user navigates to this page
   useEffect(() => {
     const loadResume = async () => {
       setIsLoading(true);
@@ -64,7 +65,24 @@ export const TailorResume: React.FC = () => {
     };
 
     loadResume();
-  }, [navigate]);
+  }, []);
+
+  // Listen for resume updates from the web app
+  useEffect(() => {
+    const handleResumeUpdate = async () => {
+      const resume = await getMasterResume();
+      if (resume) {
+        setMasterResume(resume);
+      }
+    };
+
+    // Listen for messages from the popup or other tabs
+    window.addEventListener("storage", handleResumeUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleResumeUpdate);
+    };
+  }, []);
 
   const checkMissingContentSections = (
     tailored: ResumeData,
