@@ -165,37 +165,63 @@ export async function getMasterResume(): Promise<ResumeData | null> {
 }
 
 export async function setMasterResume(resume: ResumeData): Promise<void> {
+  const resumeJson = JSON.stringify(resume);
+  const resumeSize = new Blob([resumeJson]).size;
+
+  console.log(
+    `[Storage] Setting master resume for: ${resume.contact.name}, Size: ${(resumeSize / 1024).toFixed(2)}KB`,
+  );
+
   // Save to localStorage first (works in all contexts)
-  localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, JSON.stringify(resume));
-  console.log("Master resume saved to localStorage");
+  try {
+    localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, resumeJson);
+    console.log(
+      `[Storage] Resume saved to localStorage (${(resumeSize / 1024).toFixed(2)}KB)`,
+    );
+  } catch (e) {
+    console.warn("[Storage] Failed to save to localStorage:", e);
+  }
 
   // Also save to chrome.storage.sync if available (for extension popup access)
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
     return new Promise<void>((resolve) => {
+      // Check size before saving (chrome.storage.sync has ~5MB limit per item)
+      if (resumeSize > 4 * 1024 * 1024) {
+        // 4MB safety threshold
+        console.warn(
+          `[Storage] Resume too large for chrome.storage.sync: ${(resumeSize / 1024).toFixed(2)}KB`,
+        );
+        // Still resolve - localStorage is saved which is the fallback
+        resolve();
+        return;
+      }
+
       // First, remove old data to ensure clean sync
       chrome.storage.sync.remove([STORAGE_KEYS.MASTER_RESUME], () => {
         if (chrome.runtime.lastError) {
           console.warn(
-            "Warning: Could not clear old resume from chrome.storage:",
+            "[Storage] Could not clear old resume from chrome.storage:",
             chrome.runtime.lastError,
           );
         } else {
-          console.log("Old resume cleared from chrome.storage.sync");
+          console.log("[Storage] Old resume cleared from chrome.storage.sync");
         }
 
         // Then save the new resume
         chrome.storage.sync.set(
-          { [STORAGE_KEYS.MASTER_RESUME]: JSON.stringify(resume) },
+          { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
           () => {
             if (chrome.runtime.lastError) {
-              console.warn(
-                "Error saving to chrome.storage:",
-                chrome.runtime.lastError,
+              console.error(
+                "[Storage] Error saving resume to chrome.storage.sync:",
+                chrome.runtime.lastError.message,
               );
-              // Still resolve even if chrome.storage fails, localStorage is saved
+              // Log the error but still resolve since localStorage is saved
               resolve();
             } else {
-              console.log("Master resume saved to chrome.storage.sync");
+              console.log(
+                `[Storage] Resume saved to chrome.storage.sync (${(resumeSize / 1024).toFixed(2)}KB)`,
+              );
               resolve();
             }
           },
@@ -203,6 +229,9 @@ export async function setMasterResume(resume: ResumeData): Promise<void> {
       });
     });
   }
+
+  // If chrome.storage is not available, just resolve (localStorage is enough)
+  return Promise.resolve();
 }
 
 export async function getAuthToken(): Promise<string | null> {
