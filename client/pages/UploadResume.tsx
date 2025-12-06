@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle } from "lucide-react";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { Settings } from "@/components/Settings";
 import { ResumeData } from "@/types";
-import { setMasterResume, setUserId } from "@/utils/storage";
+import { setMasterResume, setUserId, forceSyncMasterResume } from "@/utils/storage";
 import { saveResume } from "@/services/mongodb";
 
 export const UploadResume: React.FC = () => {
