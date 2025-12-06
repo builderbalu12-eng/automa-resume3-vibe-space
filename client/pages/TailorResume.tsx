@@ -84,6 +84,25 @@ export const TailorResume: React.FC = () => {
     };
   }, []);
 
+  // Refresh resume when page becomes visible (user returns from another tab/window)
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        // Page became visible - refresh the resume to ensure we have the latest
+        const resume = await getMasterResume();
+        if (resume) {
+          setMasterResume(resume);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const checkMissingContentSections = (
     tailored: ResumeData,
     configuredSections: string[],
