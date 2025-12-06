@@ -15,32 +15,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log(
       "[Background] Resume update notification received from web app",
     );
-    // Broadcast to all extension contexts that might be listening
-    // Note: We can't use chrome.runtime.sendMessage from service worker
-    // Instead, we'll broadcast to all tabs so they can relay the message
+    // The resume data has already been saved to chrome.storage.sync by the web app
+    // We just need to notify any open extension UI (popup) to refresh
+
     try {
-      chrome.tabs.query({}, (tabs) => {
-        console.log(
-          `[Background] Broadcasting resumeUpdated to ${tabs.length} tabs`,
-        );
-        tabs.forEach((tab) => {
-          if (tab.id) {
-            chrome.tabs.sendMessage(
-              tab.id,
-              { action: "resumeUpdated" },
-              () => {
-                // Ignore errors - some tabs may not have content script
-                if (chrome.runtime.lastError) {
-                  // Silently ignore - this is expected for many tabs
-                }
-              },
+      // Try to send message to popup if it's open and listening
+      chrome.runtime.sendMessage(
+        { action: "resumeUpdated" },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.log(
+              "[Background] Popup not currently listening (this is OK, data is in storage):",
+              chrome.runtime.lastError.message,
             );
+          } else {
+            console.log("[Background] ✓ Popup notified of resume update");
           }
-        });
-      });
+        },
+      );
     } catch (e) {
-      console.warn("[Background] Error broadcasting resumeUpdated:", e);
+      console.log("[Background] Could not notify popup (OK if not open):", e);
     }
+
     sendResponse({ success: true });
     return true;
   } else if (request.action === "saveSettings") {
