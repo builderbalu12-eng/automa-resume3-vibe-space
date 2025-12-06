@@ -103,6 +103,21 @@ export const TailorResume: React.FC = () => {
     };
   }, []);
 
+  // Clear tailored results and reset UI when master resume changes
+  useEffect(() => {
+    if (masterResume) {
+      setTailorState({
+        tailored: null,
+        atsScore: 0,
+        jobData: null,
+      });
+      setJobDescription("");
+      setSuccess(null);
+      setError(null);
+      setMissingContentSections([]);
+    }
+  }, [masterResume?.contact.name]); // Watch for resume name change to detect new resume
+
   const checkMissingContentSections = (
     tailored: ResumeData,
     configuredSections: string[],
