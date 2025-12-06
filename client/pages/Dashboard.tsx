@@ -61,6 +61,39 @@ export const Dashboard: React.FC = () => {
     loadData();
   }, []);
 
+  // Refresh resume when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        // Page became visible - refresh the resume
+        const resume = await getMasterResume();
+        setMasterResume(resume);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Listen for storage changes from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = async () => {
+      const resume = await getMasterResume();
+      if (resume) {
+        setMasterResume(resume);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
