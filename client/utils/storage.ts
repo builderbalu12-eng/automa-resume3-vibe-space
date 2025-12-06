@@ -102,25 +102,44 @@ export async function setUserId(userId: string): Promise<void> {
 }
 
 export async function getMasterResume(): Promise<ResumeData | null> {
+  console.log("[Storage] Attempting to get master resume...");
+
   // Try to get from chrome.storage.sync first (extension context, works across extension pages)
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
     try {
       const result = await new Promise<ResumeData | null>((resolve, reject) => {
         chrome.storage.sync.get([STORAGE_KEYS.MASTER_RESUME], (syncResult) => {
           if (chrome.runtime.lastError) {
+            console.warn(
+              "[Storage] Chrome runtime error when reading from sync:",
+              chrome.runtime.lastError.message,
+            );
             reject(chrome.runtime.lastError);
           } else {
             const value = syncResult[STORAGE_KEYS.MASTER_RESUME];
+            console.log(
+              `[Storage] chrome.storage.sync result for key "${STORAGE_KEYS.MASTER_RESUME}":`,
+              value ? `Found (${typeof value})` : "NOT FOUND",
+            );
             if (value) {
               try {
                 const resume =
                   typeof value === "string" ? JSON.parse(value) : value;
+                console.log(
+                  `[Storage] ✓ Resume parsed from chrome.storage.sync: ${resume.contact?.name}`,
+                );
                 resolve(resume);
               } catch (e) {
-                console.warn("Failed to parse chrome.storage resume:", e);
+                console.warn(
+                  "[Storage] Failed to parse chrome.storage resume:",
+                  e,
+                );
                 resolve(null);
               }
             } else {
+              console.warn(
+                "[Storage] chrome.storage.sync has no value for MASTER_RESUME key",
+              );
               resolve(null);
             }
           }
@@ -128,39 +147,57 @@ export async function getMasterResume(): Promise<ResumeData | null> {
       });
 
       if (result) {
-        console.log("Master resume retrieved from chrome.storage.sync");
         return result;
       }
     } catch (e) {
-      console.warn("Failed to get from chrome.storage.sync:", e);
+      console.warn(
+        "[Storage] Failed to get from chrome.storage.sync:",
+        e instanceof Error ? e.message : String(e),
+      );
     }
+  } else {
+    console.warn(
+      "[Storage] chrome.storage.sync not available in this context",
+    );
   }
 
   // Fallback to localStorage (web app context)
   try {
+    console.log("[Storage] Trying localStorage as fallback...");
     const stored = localStorage.getItem(STORAGE_KEYS.MASTER_RESUME);
     if (stored) {
       const resume = JSON.parse(stored);
-      console.log("Master resume retrieved from localStorage");
-      // Sync to chrome.storage if available
+      console.log(
+        `[Storage] ✓ Resume retrieved from localStorage: ${resume.contact?.name}`,
+      );
+
+      // Sync to chrome.storage if available (and if not too large)
       if (
         typeof chrome !== "undefined" &&
         chrome.storage &&
         chrome.storage.sync
       ) {
         try {
+          console.log(
+            "[Storage] Attempting to sync localStorage resume to chrome.storage...",
+          );
           await setMasterResume(resume);
         } catch (e) {
-          console.warn("Could not sync to chrome.storage:", e);
+          console.warn("[Storage] Could not sync to chrome.storage:", e);
         }
       }
       return resume;
+    } else {
+      console.warn("[Storage] localStorage has no MASTER_RESUME");
     }
   } catch (e) {
-    console.warn("Failed to get from localStorage:", e);
+    console.warn(
+      "[Storage] Failed to get from localStorage:",
+      e instanceof Error ? e.message : String(e),
+    );
   }
 
-  console.log("No master resume found in any storage");
+  console.error("[Storage] ✗ No master resume found in any storage");
   return null;
 }
 
