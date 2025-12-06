@@ -169,21 +169,11 @@ export async function getMasterResume(): Promise<ResumeData | null> {
         `[Storage] ✓ Resume retrieved from localStorage: ${resume.contact?.name}`,
       );
 
-      // Sync to chrome.storage if available (and if not too large)
-      if (
-        typeof chrome !== "undefined" &&
-        chrome.storage &&
-        chrome.storage.sync
-      ) {
-        try {
-          console.log(
-            "[Storage] Attempting to sync localStorage resume to chrome.storage...",
-          );
-          await setMasterResume(resume);
-        } catch (e) {
-          console.warn("[Storage] Could not sync to chrome.storage:", e);
-        }
-      }
+      // NOTE: Do NOT sync from localStorage to chrome.storage here
+      // This could cause old data to be re-synced and overwrite newer data
+      // chrome.storage.sync is the source of truth for the extension
+      // If it's empty, the extension should show "No Master Resume" instead
+
       return resume;
     } else {
       console.warn("[Storage] localStorage has no MASTER_RESUME");
