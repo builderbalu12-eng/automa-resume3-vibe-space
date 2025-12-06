@@ -20,19 +20,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     try {
       // Try to send message to popup if it's open and listening
-      chrome.runtime.sendMessage(
-        { action: "resumeUpdated" },
-        () => {
-          if (chrome.runtime.lastError) {
-            console.log(
-              "[Background] Popup not currently listening (this is OK, data is in storage):",
-              chrome.runtime.lastError.message,
-            );
-          } else {
-            console.log("[Background] ✓ Popup notified of resume update");
-          }
-        },
-      );
+      chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
+        if (chrome.runtime.lastError) {
+          console.log(
+            "[Background] Popup not currently listening (this is OK, data is in storage):",
+            chrome.runtime.lastError.message,
+          );
+        } else {
+          console.log("[Background] ✓ Popup notified of resume update");
+        }
+      });
     } catch (e) {
       console.log("[Background] Could not notify popup (OK if not open):", e);
     }
