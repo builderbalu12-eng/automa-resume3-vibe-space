@@ -199,28 +199,60 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.storage.sync.get(["resumematch_master_resume"], (result) => {
       try {
         const resumeData = result["resumematch_master_resume"];
+        console.log(
+          "[Content Script] chrome.storage.sync returned:",
+          resumeData ? `Data found (${typeof resumeData})` : "NO DATA",
+        );
+
         if (resumeData) {
-          const parsed =
-            typeof resumeData === "string"
-              ? JSON.parse(resumeData)
-              : resumeData;
-          console.log(
-            "[Content Script] Sending resume from chrome.storage:",
-            parsed.contact?.name,
-          );
-          sendResponse({ resume: parsed });
+          try {
+            const parsed =
+              typeof resumeData === "string"
+                ? JSON.parse(resumeData)
+                : resumeData;
+            console.log(
+              "[Content Script] ✓ Sending resume from chrome.storage:",
+              parsed.contact?.name,
+            );
+            sendResponse({ resume: parsed });
+          } catch (parseError) {
+            console.error(
+              "[Content Script] Failed to parse chrome.storage resume:",
+              parseError,
+            );
+            // Try localStorage as fallback
+            const localResume = localStorage.getItem(
+              "resumematch_master_resume",
+            );
+            if (localResume) {
+              const parsed = JSON.parse(localResume);
+              console.log(
+                "[Content Script] ✓ Sending resume from localStorage (chrome.storage parse failed):",
+                parsed.contact?.name,
+              );
+              sendResponse({ resume: parsed });
+            } else {
+              console.warn("[Content Script] No resume found in any storage");
+              sendResponse({ resume: null });
+            }
+          }
         } else {
           // Try localStorage as fallback
+          console.log(
+            "[Content Script] No resume in chrome.storage, checking localStorage...",
+          );
           const localResume = localStorage.getItem("resumematch_master_resume");
           if (localResume) {
             const parsed = JSON.parse(localResume);
             console.log(
-              "[Content Script] Sending resume from localStorage:",
+              "[Content Script] ✓ Sending resume from localStorage:",
               parsed.contact?.name,
             );
             sendResponse({ resume: parsed });
           } else {
-            console.warn("[Content Script] No resume found");
+            console.warn(
+              "[Content Script] No resume found in chrome.storage or localStorage",
+            );
             sendResponse({ resume: null });
           }
         }
