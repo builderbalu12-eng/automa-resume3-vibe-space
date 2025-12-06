@@ -11,7 +11,32 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "saveSettings") {
+  if (request.action === "resumeUpdated") {
+    console.log(
+      "[Background] Resume update notification received from web app",
+    );
+    // The resume data has already been saved to chrome.storage.sync by the web app
+    // We just need to notify any open extension UI (popup) to refresh
+
+    try {
+      // Try to send message to popup if it's open and listening
+      chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
+        if (chrome.runtime.lastError) {
+          console.log(
+            "[Background] Popup not currently listening (this is OK, data is in storage):",
+            chrome.runtime.lastError.message,
+          );
+        } else {
+          console.log("[Background] ✓ Popup notified of resume update");
+        }
+      });
+    } catch (e) {
+      console.log("[Background] Could not notify popup (OK if not open):", e);
+    }
+
+    sendResponse({ success: true });
+    return true;
+  } else if (request.action === "saveSettings") {
     console.log(
       "[Background] Saving settings to chrome.storage.sync:",
       request.settings,

@@ -102,25 +102,44 @@ export async function setUserId(userId: string): Promise<void> {
 }
 
 export async function getMasterResume(): Promise<ResumeData | null> {
+  console.log("[Storage] Attempting to get master resume...");
+
   // Try to get from chrome.storage.sync first (extension context, works across extension pages)
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
     try {
       const result = await new Promise<ResumeData | null>((resolve, reject) => {
         chrome.storage.sync.get([STORAGE_KEYS.MASTER_RESUME], (syncResult) => {
           if (chrome.runtime.lastError) {
+            console.warn(
+              "[Storage] Chrome runtime error when reading from sync:",
+              chrome.runtime.lastError.message,
+            );
             reject(chrome.runtime.lastError);
           } else {
             const value = syncResult[STORAGE_KEYS.MASTER_RESUME];
+            console.log(
+              `[Storage] chrome.storage.sync result for key "${STORAGE_KEYS.MASTER_RESUME}":`,
+              value ? `Found (${typeof value})` : "NOT FOUND",
+            );
             if (value) {
               try {
                 const resume =
                   typeof value === "string" ? JSON.parse(value) : value;
+                console.log(
+                  `[Storage] ✓ Resume parsed from chrome.storage.sync: ${resume.contact?.name}`,
+                );
                 resolve(resume);
               } catch (e) {
-                console.warn("Failed to parse chrome.storage resume:", e);
+                console.warn(
+                  "[Storage] Failed to parse chrome.storage resume:",
+                  e,
+                );
                 resolve(null);
               }
             } else {
+              console.warn(
+                "[Storage] chrome.storage.sync has no value for MASTER_RESUME key",
+              );
               resolve(null);
             }
           }
@@ -128,68 +147,132 @@ export async function getMasterResume(): Promise<ResumeData | null> {
       });
 
       if (result) {
-        console.log("Master resume retrieved from chrome.storage.sync");
         return result;
       }
     } catch (e) {
-      console.warn("Failed to get from chrome.storage.sync:", e);
+      console.warn(
+        "[Storage] Failed to get from chrome.storage.sync:",
+        e instanceof Error ? e.message : String(e),
+      );
     }
+  } else {
+    console.warn("[Storage] chrome.storage.sync not available in this context");
   }
 
   // Fallback to localStorage (web app context)
   try {
+    console.log("[Storage] Trying localStorage as fallback...");
     const stored = localStorage.getItem(STORAGE_KEYS.MASTER_RESUME);
     if (stored) {
       const resume = JSON.parse(stored);
-      console.log("Master resume retrieved from localStorage");
-      // Sync to chrome.storage if available
-      if (
-        typeof chrome !== "undefined" &&
-        chrome.storage &&
-        chrome.storage.sync
-      ) {
-        try {
-          await setMasterResume(resume);
-        } catch (e) {
-          console.warn("Could not sync to chrome.storage:", e);
-        }
-      }
+      console.log(
+        `[Storage] ✓ Resume retrieved from localStorage: ${resume.contact?.name}`,
+      );
+
+      // NOTE: Do NOT sync from localStorage to chrome.storage here
+      // This could cause old data to be re-synced and overwrite newer data
+      // chrome.storage.sync is the source of truth for the extension
+      // If it's empty, the extension should show "No Master Resume" instead
+
       return resume;
+    } else {
+      console.warn("[Storage] localStorage has no MASTER_RESUME");
     }
   } catch (e) {
-    console.warn("Failed to get from localStorage:", e);
+    console.warn(
+      "[Storage] Failed to get from localStorage:",
+      e instanceof Error ? e.message : String(e),
+    );
   }
 
-  console.log("No master resume found in any storage");
+  console.error("[Storage] ✗ No master resume found in any storage");
   return null;
 }
 
 export async function setMasterResume(resume: ResumeData): Promise<void> {
+  const resumeJson = JSON.stringify(resume);
+  const resumeSize = new Blob([resumeJson]).size;
+
+  console.log(
+    `[Storage] Setting master resume for: ${resume.contact.name}, Size: ${(resumeSize / 1024).toFixed(2)}KB`,
+  );
+
   // Save to localStorage first (works in all contexts)
-  localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, JSON.stringify(resume));
-  console.log("Master resume saved to localStorage");
+  try {
+    localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, resumeJson);
+    console.log(
+      `[Storage] Resume saved to localStorage (${(resumeSize / 1024).toFixed(2)}KB)`,
+    );
+  } catch (e) {
+    console.warn("[Storage] Failed to save to localStorage:", e);
+  }
 
   // Also save to chrome.storage.sync if available (for extension popup access)
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
     return new Promise<void>((resolve) => {
+      // Check size before saving (chrome.storage.sync has ~5MB limit per item)
+      if (resumeSize > 4 * 1024 * 1024) {
+        // 4MB safety threshold
+        console.warn(
+          `[Storage] Resume too large for chrome.storage.sync: ${(resumeSize / 1024).toFixed(2)}KB`,
+        );
+        // Still resolve - localStorage is saved which is the fallback
+        resolve();
+        return;
+      }
+
+      // IMPORTANT: Use chrome.storage.sync.set() with force flag to overwrite old data
+      // We do NOT use remove() first because it creates a race condition
+      // set() will automatically overwrite the existing value
+      console.log(
+        `[Storage] Saving resume to chrome.storage.sync (will overwrite existing data)...`,
+      );
+
       chrome.storage.sync.set(
-        { [STORAGE_KEYS.MASTER_RESUME]: JSON.stringify(resume) },
+        { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
         () => {
           if (chrome.runtime.lastError) {
-            console.warn(
-              "Error saving to chrome.storage:",
-              chrome.runtime.lastError,
+            console.error(
+              "[Storage] Error saving resume to chrome.storage.sync:",
+              chrome.runtime.lastError.message,
             );
-            // Still resolve even if chrome.storage fails, localStorage is saved
+            // Log the error but still resolve since localStorage is saved
             resolve();
           } else {
-            console.log("Master resume saved to chrome.storage.sync");
-            resolve();
+            console.log(
+              `[Storage] ✓ Resume successfully saved to chrome.storage.sync (${(resumeSize / 1024).toFixed(2)}KB)`,
+            );
+
+            // Verify the data was actually written
+            chrome.storage.sync.get([STORAGE_KEYS.MASTER_RESUME], (result) => {
+              const savedData = result[STORAGE_KEYS.MASTER_RESUME];
+              if (savedData) {
+                try {
+                  const savedResume =
+                    typeof savedData === "string"
+                      ? JSON.parse(savedData)
+                      : savedData;
+                  console.log(
+                    `[Storage] ✓ Verification: chrome.storage.sync now contains resume for: ${savedResume.contact?.name}`,
+                  );
+                } catch (e) {
+                  console.warn("[Storage] Could not verify saved data:", e);
+                }
+              } else {
+                console.warn(
+                  "[Storage] WARNING: Data was not found after saving!",
+                );
+              }
+              resolve();
+            });
           }
         },
       );
     });
   }
+
+  // If chrome.storage is not available, just resolve (localStorage is enough)
+  return Promise.resolve();
 }
 
 export async function getAuthToken(): Promise<string | null> {
@@ -210,20 +293,109 @@ export async function setGeminiApiKey(key: string): Promise<void> {
 
 export async function clearAllStorage(): Promise<void> {
   const keys = Object.values(STORAGE_KEYS);
+
+  // Clear localStorage
+  keys.forEach((key) => localStorage.removeItem(key as string));
+  console.log("[Storage] All data cleared from localStorage");
+
   if (typeof chrome !== "undefined" && chrome.storage) {
     return new Promise((resolve, reject) => {
       chrome.storage.sync.remove(keys, () => {
         if (chrome.runtime.lastError) {
+          console.error(
+            "[Storage] Error clearing chrome.storage.sync:",
+            chrome.runtime.lastError.message,
+          );
           reject(chrome.runtime.lastError);
         } else {
+          console.log("[Storage] ✓ All data cleared from chrome.storage.sync");
           resolve();
         }
       });
     });
-  } else {
-    // Fallback to localStorage
-    keys.forEach((key) => localStorage.removeItem(key as string));
   }
+}
+
+export async function forceSyncMasterResume(resume: ResumeData): Promise<void> {
+  console.log("[Storage] Force syncing master resume to all storage...");
+
+  const resumeJson = JSON.stringify(resume);
+  const resumeSize = new Blob([resumeJson]).size;
+
+  // Step 1: Save to localStorage first (always works)
+  try {
+    localStorage.setItem(STORAGE_KEYS.MASTER_RESUME, resumeJson);
+    console.log(
+      `[Storage] Resume saved to localStorage (${(resumeSize / 1024).toFixed(2)}KB)`,
+    );
+  } catch (e) {
+    console.warn("[Storage] Failed to save to localStorage:", e);
+  }
+
+  // Step 2: Save to chrome.storage.sync if available
+  if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
+    return new Promise<void>((resolve) => {
+      // Check size first
+      if (resumeSize > 4 * 1024 * 1024) {
+        console.warn(
+          `[Storage] Resume too large for chrome.storage.sync: ${(resumeSize / 1024).toFixed(2)}KB`,
+        );
+        resolve();
+        return;
+      }
+
+      console.log(
+        "[Storage] Setting resume to chrome.storage.sync (direct set, no remove)...",
+      );
+
+      // Direct set without remove first - this avoids race conditions
+      chrome.storage.sync.set(
+        { [STORAGE_KEYS.MASTER_RESUME]: resumeJson },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Storage] Error saving to chrome.storage.sync:",
+              chrome.runtime.lastError.message,
+            );
+            resolve();
+            return;
+          }
+
+          console.log(
+            `[Storage] ✓ Resume saved to chrome.storage.sync (${(resumeSize / 1024).toFixed(2)}KB)`,
+          );
+
+          // Verify data was written
+          chrome.storage.sync.get(
+            [STORAGE_KEYS.MASTER_RESUME],
+            (verifyResult) => {
+              const savedData = verifyResult[STORAGE_KEYS.MASTER_RESUME];
+              if (savedData) {
+                try {
+                  const savedResume =
+                    typeof savedData === "string"
+                      ? JSON.parse(savedData)
+                      : savedData;
+                  console.log(
+                    `[Storage] ✓ Verified: chrome.storage.sync contains: ${savedResume.contact?.name}`,
+                  );
+                } catch (e) {
+                  console.warn("[Storage] Could not verify saved data:", e);
+                }
+              } else {
+                console.warn(
+                  "[Storage] ⚠️ WARNING: Data not found after saving!",
+                );
+              }
+              resolve();
+            },
+          );
+        },
+      );
+    });
+  }
+
+  return Promise.resolve();
 }
 
 export async function getSettings(): Promise<AppSettings | null> {

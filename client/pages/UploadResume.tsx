@@ -4,7 +4,11 @@ import { ArrowLeft, CheckCircle } from "lucide-react";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { Settings } from "@/components/Settings";
 import { ResumeData } from "@/types";
-import { setMasterResume, setUserId } from "@/utils/storage";
+import {
+  setMasterResume,
+  setUserId,
+  forceSyncMasterResume,
+} from "@/utils/storage";
 import { saveResume } from "@/services/mongodb";
 
 export const UploadResume: React.FC = () => {
@@ -31,8 +35,68 @@ export const UploadResume: React.FC = () => {
       const userId = `user_${Date.now()}`;
       await setUserId(userId);
 
-      // Save to local storage
-      await setMasterResume(uploadedResume);
+      // Save to local storage with force sync to ensure chrome extension gets updated
+      console.log(
+        "[UploadResume] Saving resume to storage:",
+        uploadedResume.contact.name,
+      );
+      await forceSyncMasterResume(uploadedResume);
+      console.log(
+        "[UploadResume] Resume saved successfully to all storage locations",
+      );
+
+      // Notify Chrome extension that resume has been updated
+      // This will cause the extension popup to refresh its cached data
+      try {
+        // Method 1: If we have chrome.runtime access (e.g., in extension context)
+        if (typeof chrome !== "undefined" && chrome.runtime) {
+          try {
+            console.log(
+              "[UploadResume] Attempting to notify extension via chrome.runtime",
+            );
+            chrome.runtime.sendMessage(
+              {
+                action: "resumeUpdated",
+                resume: uploadedResume,
+              },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  // Extension context may not be available, that's OK
+                  console.warn(
+                    "[UploadResume] Could not notify extension via chrome.runtime:",
+                    chrome.runtime.lastError.message,
+                  );
+                } else {
+                  console.log(
+                    "[UploadResume] ✓ Extension notified via chrome.runtime",
+                  );
+                }
+              },
+            );
+          } catch (e) {
+            console.warn(
+              "[UploadResume] Error using chrome.runtime.sendMessage:",
+              e,
+            );
+          }
+        }
+
+        // Method 2: Send via window.postMessage so content script can relay it
+        console.log(
+          "[UploadResume] Posting resume update to content script via window.postMessage",
+        );
+        window.postMessage(
+          {
+            source: "resumematch-web-app",
+            action: "resumeUpdated",
+            resume: uploadedResume,
+          },
+          "*",
+        );
+        console.log("[UploadResume] ✓ Resume update posted to content script");
+      } catch (e) {
+        console.warn("[UploadResume] Error notifying extension:", e);
+      }
 
       // Save resume data
       try {
