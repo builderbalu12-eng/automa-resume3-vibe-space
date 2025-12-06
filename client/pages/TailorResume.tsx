@@ -41,6 +41,7 @@ export const TailorResume: React.FC = () => {
     jobData: null,
   });
 
+  // Load resume on component mount and when user navigates to this page
   useEffect(() => {
     const loadResume = async () => {
       setIsLoading(true);
@@ -64,7 +65,58 @@ export const TailorResume: React.FC = () => {
     };
 
     loadResume();
-  }, [navigate]);
+  }, []);
+
+  // Listen for resume updates from the web app
+  useEffect(() => {
+    const handleResumeUpdate = async () => {
+      const resume = await getMasterResume();
+      if (resume) {
+        setMasterResume(resume);
+      }
+    };
+
+    // Listen for messages from the popup or other tabs
+    window.addEventListener("storage", handleResumeUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleResumeUpdate);
+    };
+  }, []);
+
+  // Refresh resume when page becomes visible (user returns from another tab/window)
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        // Page became visible - refresh the resume to ensure we have the latest
+        const resume = await getMasterResume();
+        if (resume) {
+          setMasterResume(resume);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Clear tailored results and reset UI when master resume changes
+  useEffect(() => {
+    if (masterResume) {
+      setTailorState({
+        tailored: null,
+        atsScore: 0,
+        jobData: null,
+      });
+      setJobDescription("");
+      setSuccess(null);
+      setError(null);
+      setMissingContentSections([]);
+    }
+  }, [masterResume?.contact.name]); // Watch for resume name change to detect new resume
 
   const checkMissingContentSections = (
     tailored: ResumeData,

@@ -61,6 +61,39 @@ export const Dashboard: React.FC = () => {
     loadData();
   }, []);
 
+  // Refresh resume when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        // Page became visible - refresh the resume
+        const resume = await getMasterResume();
+        setMasterResume(resume);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Listen for storage changes from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = async () => {
+      const resume = await getMasterResume();
+      if (resume) {
+        setMasterResume(resume);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -317,9 +350,9 @@ export const Dashboard: React.FC = () => {
                 Recent Applications
               </h3>
               <div className="grid gap-4">
-                {recentApplications.map((app) => (
+                {recentApplications.map((app, idx) => (
                   <div
-                    key={app._id}
+                    key={app._id || app.id || `app-${idx}`}
                     className="group flex items-center justify-between p-5 rounded-lg border border-border bg-card hover:bg-primary/5 hover:border-primary/30 transition-all duration-300"
                   >
                     <div className="min-w-0 flex-1">

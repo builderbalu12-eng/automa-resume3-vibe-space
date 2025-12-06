@@ -13,25 +13,90 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "resumeUpdated") {
     console.log(
-      "[Background] Resume update notification received from web app",
+      "[Background] Resume update notification received from web app:",
+      request.resume?.contact?.name,
     );
-    // The resume data has already been saved to chrome.storage.sync by the web app
-    // We just need to notify any open extension UI (popup) to refresh
 
-    try {
-      // Try to send message to popup if it's open and listening
-      chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
-        if (chrome.runtime.lastError) {
-          console.log(
-            "[Background] Popup not currently listening (this is OK, data is in storage):",
-            chrome.runtime.lastError.message,
-          );
-        } else {
-          console.log("[Background] ✓ Popup notified of resume update");
-        }
-      });
-    } catch (e) {
-      console.log("[Background] Could not notify popup (OK if not open):", e);
+    // Save the resume to chrome.storage.sync so extension UI can access it
+    if (request.resume) {
+      try {
+        const resumeJson = JSON.stringify(request.resume);
+        const resumeSize = new Blob([resumeJson]).size;
+
+        console.log(
+          "[Background] Saving updated resume to chrome.storage.sync:",
+          request.resume.contact?.name,
+          `(${(resumeSize / 1024).toFixed(2)}KB)`,
+        );
+
+        chrome.storage.sync.set(
+          { resumematch_master_resume: resumeJson },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                "[Background] Error saving resume to chrome.storage.sync:",
+                chrome.runtime.lastError.message,
+              );
+            } else {
+              console.log("[Background] ✓ Resume saved to chrome.storage.sync");
+
+              // Verify the save was successful
+              chrome.storage.sync.get(
+                ["resumematch_master_resume"],
+                (result) => {
+                  if (result.resumematch_master_resume) {
+                    try {
+                      const saved = JSON.parse(
+                        result.resumematch_master_resume,
+                      );
+                      console.log(
+                        "[Background] ✓ Verification: chrome.storage.sync now contains resume for:",
+                        saved.contact?.name,
+                      );
+                    } catch (e) {
+                      console.warn(
+                        "[Background] Could not verify saved data:",
+                        e,
+                      );
+                    }
+                  } else {
+                    console.warn(
+                      "[Background] ⚠️ WARNING: Resume was not found after saving to chrome.storage.sync!",
+                    );
+                  }
+                },
+              );
+
+              // Notify any open extension UI (popup) to refresh
+              try {
+                chrome.runtime.sendMessage({ action: "resumeUpdated" }, () => {
+                  if (chrome.runtime.lastError) {
+                    console.log(
+                      "[Background] Popup not currently listening (this is OK, data is in storage):",
+                      chrome.runtime.lastError.message,
+                    );
+                  } else {
+                    console.log(
+                      "[Background] ✓ Popup notified of resume update",
+                    );
+                  }
+                });
+              } catch (e) {
+                console.log(
+                  "[Background] Could not notify popup (OK if not open):",
+                  e,
+                );
+              }
+            }
+          },
+        );
+      } catch (e) {
+        console.error("[Background] Error processing resume update:", e);
+      }
+    } else {
+      console.warn(
+        "[Background] Resume update received but no resume data provided",
+      );
     }
 
     sendResponse({ success: true });
