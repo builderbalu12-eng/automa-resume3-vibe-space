@@ -51,6 +51,5 @@
       "js": ["content.js"],
       "run_at": "document_idle"
     }
-  ],
-  "privacy_policy": "https://resume.zenlead.in/privacy-policy"
+  ]
 }
