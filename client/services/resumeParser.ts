@@ -154,9 +154,63 @@ async function parseWithGemini(
 }
 
 function getResumeParsing(): string {
-  return `Extract ALL content from this resume and return valid JSON with: contact (name, email, phone, location, website), summary, skills (array), experience (array with title, company, startDate, endDate, description), education (array), plus any other sections found (certifications, achievements, publications, projects, etc.).
+  return `You are a resume parser. Extract ALL content from this resume and return valid JSON.
 
-Return ONLY valid JSON, no markdown.`;
+CRITICAL:
+- Extract ALL technical skills, programming languages, tools, and soft skills as a non-empty array
+- Extract ALL work experience/jobs/projects as a non-empty array with fields: title, company, startDate, endDate (use "Present" if current), description (array of bullet points)
+- If skills are listed inline with experience, extract them separately into skills array
+- If skills appear in projects or descriptions, extract them to skills array
+- Parse "Projects" section as experience entries if no work experience found
+- Handle various formats: bullet points, paragraphs, tables, or inline text
+
+Required JSON structure:
+{
+  "contact": {
+    "name": "Full Name",
+    "email": "email@example.com",
+    "phone": "phone number or empty string",
+    "location": "location or empty string",
+    "website": "optional",
+    "linkedin": "optional",
+    "github": "optional"
+  },
+  "summary": "2-3 sentence professional summary",
+  "skills": ["skill1", "skill2", "skill3", ...] (must be non-empty),
+  "experience": [
+    {
+      "title": "Job Title",
+      "company": "Company Name",
+      "location": "optional",
+      "startDate": "YYYY-MM or Month Year",
+      "endDate": "YYYY-MM, Month Year, or Present",
+      "isCurrentlyWorking": true/false,
+      "description": ["bullet point 1", "bullet point 2", ...]
+    }
+  ] (must be non-empty),
+  "education": [
+    {
+      "institution": "University/College Name",
+      "degree": "Bachelor/Master/PhD/Certification",
+      "field": "Field of Study",
+      "graduationDate": "YYYY-MM or Month Year",
+      "gpa": "optional",
+      "achievements": ["optional achievement"]
+    }
+  ],
+  "certifications": ["cert1", "cert2"],
+  "achievements": ["achievement1"],
+  "publications": ["publication1"],
+  "hobbies": ["hobby1"]
+}
+
+If any section is missing from the resume, create reasonable defaults:
+- If no explicit skills section, extract all technical terms, languages, tools, and frameworks mentioned
+- If no work experience, look for projects, internships, freelance work, or academic projects
+- Ensure skills array has at least 5-10 items
+- Ensure experience array has at least 1-2 entries
+
+Return ONLY valid JSON, no markdown, no code blocks.`;
 }
 
 function buildResumeObject(parsed: any): ResumeData {
@@ -213,7 +267,37 @@ function buildResumeObject(parsed: any): ResumeData {
   ];
   for (const key in parsed) {
     if (!standardKeys.includes(key) && parsed[key]) {
-      (resume as any)[key] = parsed[key];
+      let value = parsed[key];
+
+      // Normalize string arrays (publications, certifications, achievements, hobbies)
+      if (
+        Array.isArray(value) &&
+        ["publications", "certifications", "achievements", "hobbies"].includes(
+          key,
+        )
+      ) {
+        value = value.map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
+          // Handle object format (e.g., {title, date, publisher, link})
+          if (typeof item === "object" && item !== null) {
+            // Try to construct a meaningful string from the object
+            if (item.title) {
+              const parts = [item.title];
+              if (item.author) parts.push(`by ${item.author}`);
+              if (item.publisher) parts.push(`(${item.publisher})`);
+              if (item.date) parts.push(item.date);
+              return parts.join(" ");
+            } else if (item.name) {
+              return item.name;
+            }
+          }
+          return String(item);
+        });
+      }
+
+      (resume as any)[key] = value;
     }
   }
 
@@ -416,20 +500,27 @@ export function validateResume(resume: ResumeData): {
     errors.push("Missing email");
   }
 
-  if (!resume.contact.phone?.trim()) {
-    errors.push("Missing phone");
+  // Phone is optional if email exists
+  if (!resume.contact.phone?.trim() && !resume.contact.email?.trim()) {
+    errors.push("Missing contact information (phone or email)");
   }
 
-  if (resume.skills.length === 0) {
+  // Skills must exist
+  if (!resume.skills || resume.skills.length === 0) {
     errors.push("No skills listed");
   }
 
-  if (resume.experience.length === 0) {
+  // Experience must exist
+  if (!resume.experience || resume.experience.length === 0) {
     errors.push("No experience listed");
   }
 
-  if (resume.education.length === 0) {
-    errors.push("No education listed");
+  // Education is optional if experience exists
+  if (
+    (!resume.education || resume.education.length === 0) &&
+    (!resume.experience || resume.experience.length === 0)
+  ) {
+    errors.push("No education or experience listed");
   }
 
   return {

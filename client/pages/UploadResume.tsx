@@ -211,11 +211,21 @@ export const UploadResume: React.FC = () => {
                     Publications ({resume.publications.length})
                   </h4>
                   <ul className="space-y-1">
-                    {resume.publications.map((publication, i) => (
-                      <li key={i} className="text-sm text-muted-foreground">
-                        📄 {publication}
-                      </li>
-                    ))}
+                    {resume.publications.map((publication, i) => {
+                      const pubText =
+                        typeof publication === "string"
+                          ? publication
+                          : publication &&
+                              typeof publication === "object" &&
+                              "title" in publication
+                            ? `${publication.title}${publication.publisher ? ` (${publication.publisher})` : ""}${publication.date ? ` - ${publication.date}` : ""}`
+                            : String(publication);
+                      return (
+                        <li key={i} className="text-sm text-muted-foreground">
+                          📄 {pubText}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -240,20 +250,26 @@ export const UploadResume: React.FC = () => {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => navigate("/")}
-                className="px-6 py-3 rounded-lg bg-background border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition-colors"
+                onClick={() => navigate("/tailor")}
+                className="px-6 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all"
               >
-                Go to Dashboard
+                🚀 Tailor Resume
               </button>
               <button
                 onClick={() => {
                   setResume(null);
                 }}
-                className="px-6 py-3 rounded-lg bg-gradient-primary text-primary-foreground font-semibold hover:shadow-glow transition-all"
+                className="px-6 py-3 rounded-lg border border-border hover:bg-muted transition-colors font-semibold"
               >
-                Upload Another Resume
+                📤 Upload New
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="px-6 py-3 rounded-lg bg-background border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition-colors"
+              >
+                Dashboard
               </button>
             </div>
           </div>

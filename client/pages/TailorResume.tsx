@@ -461,11 +461,24 @@ export const TailorResume: React.FC = () => {
                         Publications
                       </h4>
                       <ul className="space-y-1">
-                        {masterResume.publications.map((publication, i) => (
-                          <li key={i} className="text-sm text-muted-foreground">
-                            📄 {publication}
-                          </li>
-                        ))}
+                        {masterResume.publications.map((publication, i) => {
+                          const pubText =
+                            typeof publication === "string"
+                              ? publication
+                              : publication &&
+                                  typeof publication === "object" &&
+                                  "title" in publication
+                                ? `${publication.title}${publication.publisher ? ` (${publication.publisher})` : ""}${publication.date ? ` - ${publication.date}` : ""}`
+                                : String(publication);
+                          return (
+                            <li
+                              key={i}
+                              className="text-sm text-muted-foreground"
+                            >
+                              📄 {pubText}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}
