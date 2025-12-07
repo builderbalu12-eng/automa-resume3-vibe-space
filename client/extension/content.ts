@@ -5,6 +5,47 @@ import {
 
 let injectedButton = false;
 
+// Listen for messages from the web app via window.postMessage
+// This allows the web app (localhost) to communicate with the extension
+window.addEventListener("message", (event) => {
+  // Only accept messages from our web app
+  if (event.source !== window) return;
+  if (event.data.source !== "resumematch-web-app") return;
+
+  console.log(
+    "[Content Script] Received message from web app:",
+    event.data.action,
+  );
+
+  if (event.data.action === "saveSettings") {
+    console.log(
+      "[Content Script] Web app requesting to save settings:",
+      event.data.settings,
+    );
+
+    // Relay to background script
+    chrome.runtime.sendMessage(
+      {
+        action: "saveSettings",
+        settings: event.data.settings,
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "[Content Script] Error relaying saveSettings to background:",
+            chrome.runtime.lastError.message,
+          );
+        } else {
+          console.log(
+            "[Content Script] ✓ Settings relayed to background script successfully",
+            response,
+          );
+        }
+      },
+    );
+  }
+});
+
 function injectButton() {
   // Prevent duplicate buttons
   if (injectedButton) {
@@ -212,5 +253,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     }
     return true;
+  } else if (request.action === "saveSettings") {
+    console.log(
+      "[Content Script] Received saveSettings request, relaying to background script",
+    );
+    try {
+      // Relay the settings to the background script
+      chrome.runtime.sendMessage(
+        {
+          action: "saveSettings",
+          settings: request.settings,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Content Script] Error relaying saveSettings:",
+              chrome.runtime.lastError.message,
+            );
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError.message,
+            });
+          } else {
+            console.log(
+              "[Content Script] ✓ Settings relayed successfully to background script",
+            );
+            sendResponse(response || { success: true });
+          }
+        },
+      );
+    } catch (e) {
+      console.error("[Content Script] Failed to relay settings:", e);
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    return true; // async response
   }
 });

@@ -2,6 +2,7 @@ import { ResumeData, ContactInfo, Experience, Education } from "@/types";
 import mammoth from "mammoth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getApiKeyFromSettings } from "@/utils/storage";
+import { retryWithBackoff } from "@/services/gemini";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY || "";
 
@@ -114,16 +115,18 @@ async function parseWithGemini(
       parts = [{ text: prompt }];
     }
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: parts,
-        },
-      ],
+    const responseText = await retryWithBackoff(async () => {
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: parts,
+          },
+        ],
+      });
+      return result.response.text();
     });
 
-    const responseText = result.response.text();
     console.log(
       "[Gemini] Parse response received, length:",
       responseText.length,
@@ -151,23 +154,9 @@ async function parseWithGemini(
 }
 
 function getResumeParsing(): string {
-  return `Parse this resume completely and extract ALL sections and content. Return a JSON object with the following structure, but ADD any additional sections you find in the resume:
+  return `Extract ALL content from this resume and return valid JSON with: contact (name, email, phone, location, website), summary, skills (array), experience (array with title, company, startDate, endDate, description), education (array), plus any other sections found (certifications, achievements, publications, projects, etc.).
 
-Base structure (always include if data exists):
-- contact: {name, email, phone, location, website}
-- summary
-- skills (array)
-- experience (array with title, company, startDate, endDate, isCurrentlyWorking, description)
-- education (array with degree, field, institution, graduationDate)
-- certifications (array)
-- achievements (array)
-- publications (array)
-- projects (array)
-- hobbies (array)
-
-IMPORTANT: If you find additional sections like 'Professional Summary', 'Leadership Experience', 'Volunteer Work', 'Awards', 'Languages', 'Research', 'Patents', etc., ADD them as new keys in the JSON. Do not skip any content. Extract everything from the resume and structure it properly.
-
-Return ONLY valid JSON with no markdown or additional text.`;
+Return ONLY valid JSON, no markdown.`;
 }
 
 function buildResumeObject(parsed: any): ResumeData {
@@ -272,8 +261,10 @@ ${resumeText}
 Return ONLY valid JSON, no other text.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    const responseText = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    });
 
     // Extract JSON from response (handle markdown code blocks if present)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);

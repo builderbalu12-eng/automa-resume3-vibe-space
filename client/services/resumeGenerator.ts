@@ -137,6 +137,20 @@ async function generatePDFBlobProper(
       `
           : ""
       }
+
+      ${
+        resume.customSections && Object.keys(resume.customSections).length > 0
+          ? Object.entries(resume.customSections)
+              .filter(([, content]) => content && content.trim())
+              .map(
+                ([sectionName, sectionContent]) => `
+          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">${sectionName}</h2>
+          <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${sectionContent}</p>
+        `,
+              )
+              .join("")
+          : ""
+      }
     </div>
   `;
 
@@ -385,6 +399,36 @@ export async function generateResumeDocx(
     });
   }
 
+  if (resume.customSections && Object.keys(resume.customSections).length > 0) {
+    for (const [sectionName, sectionContent] of Object.entries(
+      resume.customSections,
+    )) {
+      if (sectionContent && sectionContent.trim()) {
+        sections.push(
+          new Paragraph({
+            text: sectionName.toUpperCase(),
+            bold: true,
+            size: 24,
+            border: {
+              bottom: {
+                color: "000000",
+                space: 1,
+                style: BorderStyle.SINGLE,
+                size: 6,
+              },
+            },
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            text: sectionContent,
+            size: 22,
+            spacing: { after: 400 },
+          }),
+        );
+      }
+    }
+  }
+
   const doc = new Document({
     sections: [
       {
@@ -526,6 +570,20 @@ export async function downloadResumePDF(
             )
             .join("")}
         `
+            : ""
+        }
+
+        ${
+          resume.customSections && Object.keys(resume.customSections).length > 0
+            ? Object.entries(resume.customSections)
+                .filter(([, content]) => content && content.trim())
+                .map(
+                  ([sectionName, sectionContent]) => `
+            <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; border-bottom: 2px solid #333; padding-bottom: 3px;">${sectionName}</h2>
+            <p style="font-size: 11px; margin-bottom: 10px; line-height: 1.5;">${sectionContent}</p>
+          `,
+                )
+                .join("")
             : ""
         }
       </div>

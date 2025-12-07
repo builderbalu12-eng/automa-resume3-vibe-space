@@ -1,4 +1,4 @@
-import { getMasterResume, setMasterResume } from "@/utils/storage";
+import { getMasterResume, setMasterResume, getSettings } from "@/utils/storage";
 import { analyzeJobAndTailorResume, isJobPostingPage } from "@/services/gemini";
 import { downloadResume } from "@/services/resumeGenerator";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
@@ -9,6 +9,7 @@ interface PopupState {
   jobData: JobDescription | null;
   tailoredResume: ResumeData | null;
   atsScore: ATSScore | null;
+  masterAtsScore: ATSScore | null;
   isJobPosting?: boolean | null;
 }
 
@@ -18,6 +19,7 @@ let state: PopupState = {
   jobData: null,
   tailoredResume: null,
   atsScore: null,
+  masterAtsScore: null,
   isJobPosting: null,
 };
 
@@ -304,7 +306,33 @@ function updateUI() {
       if (jobTitleEl) jobTitleEl.textContent = state.jobData.title || "Unknown";
       if (jobCompanyEl)
         jobCompanyEl.textContent = state.jobData.company || "Unknown";
-      if (atsScoreEl) atsScoreEl.textContent = `${state.atsScore.score || 0}%`;
+
+      // Calculate improvement
+      const masterScore = state.masterAtsScore?.score || 0;
+      const tailoredScore = state.atsScore?.score || 0;
+      const improvement = tailoredScore - masterScore;
+      const improvementColor = improvement >= 0 ? "#10b981" : "#ef4444";
+
+      // Display both scores with improvement
+      if (atsScoreEl) {
+        atsScoreEl.innerHTML = `
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="flex: 1;">
+              <div style="font-size: 11px; color: #999; margin-bottom: 2px;">Master</div>
+              <div style="font-size: 20px; font-weight: 700; color: #666;">${masterScore}%</div>
+            </div>
+            <div style="font-size: 18px; color: #ccc;">→</div>
+            <div style="flex: 1;">
+              <div style="font-size: 11px; color: #999; margin-bottom: 2px;">Tailored</div>
+              <div style="font-size: 20px; font-weight: 700; color: #667eea;">${tailoredScore}%</div>
+            </div>
+            <div style="padding: 4px 8px; background: ${improvementColor}20; border-radius: 4px; text-align: center; min-width: 50px;">
+              <div style="font-size: 10px; color: ${improvementColor}; font-weight: 600;">${improvement >= 0 ? "+" : ""}${improvement}%</div>
+            </div>
+          </div>
+        `;
+      }
+
       if (summaryEl) {
         summaryEl.innerHTML = `<div style="font-size: 12px; line-height: 1.4; color: #666;">Key Skills Matched: ${state.atsScore.keywordMatches.slice(0, 3).join(", ") || "—"}</div>`;
       }
@@ -350,11 +378,52 @@ if (tailorBtn) {
 
     try {
       console.log("[Popup] Starting job analysis and resume tailoring...");
+      console.log(
+        "[Popup] Master resume has",
+        state.masterResume.contact?.name,
+      );
 
-      // Call unified Gemini function
+      // Load configured custom sections from settings
+      let configuredSections: string[] = [];
+      try {
+        console.log(
+          "[Popup] Attempting to load settings from chrome.storage.sync...",
+        );
+        const settings = await getSettings();
+        console.log("[Popup] Full settings loaded:", JSON.stringify(settings));
+
+        configuredSections = settings?.resumeContentSections || [];
+        console.log(
+          "[Popup] Configured sections count:",
+          configuredSections.length,
+        );
+        console.log(
+          "[Popup] Configured sections:",
+          JSON.stringify(configuredSections),
+        );
+
+        if (configuredSections.length === 0) {
+          console.warn("[Popup] No configured sections found in settings");
+        }
+      } catch (e) {
+        console.error(
+          "[Popup] Error loading settings:",
+          e instanceof Error ? e.message : String(e),
+        );
+        configuredSections = [];
+      }
+
+      console.log(
+        "[Popup] Calling analyzeJobAndTailorResume with",
+        configuredSections.length,
+        "sections",
+      );
+
+      // Call unified Gemini function with configured sections
       const result = await analyzeJobAndTailorResume(
         state.pageHTML,
         state.masterResume,
+        configuredSections,
       );
 
       console.log("[Popup] ✓ Job analysis complete:", result.jobData.title);
@@ -363,6 +432,33 @@ if (tailorBtn) {
       state.jobData = result.jobData;
       state.tailoredResume = result.tailoredResume;
       state.atsScore = result.atsScore;
+      state.masterAtsScore = result.masterAtsScore || null;
+
+      // Log custom sections for debugging
+      console.log(
+        "[Popup] Tailored resume customSections:",
+        JSON.stringify(state.tailoredResume.customSections),
+      );
+
+      if (
+        state.tailoredResume.customSections &&
+        Object.keys(state.tailoredResume.customSections).length > 0
+      ) {
+        console.log(
+          "[Popup] ✓ Custom sections generated:",
+          Object.keys(state.tailoredResume.customSections),
+        );
+        console.log(
+          "[Popup] Custom sections content:",
+          JSON.stringify(state.tailoredResume.customSections),
+        );
+      } else {
+        console.warn(
+          "[Popup] WARNING: No custom sections in tailored resume despite",
+          configuredSections.length,
+          "configured sections",
+        );
+      }
 
       if (loadingEl) loadingEl.classList.add("hidden");
       if (successEl) {
@@ -483,6 +579,16 @@ if (downloadBtn) {
 
     try {
       console.log("[Popup] Downloading tailored resume as DOCX...");
+      console.log(
+        "[Popup] Resume before download - customSections:",
+        JSON.stringify(state.tailoredResume.customSections),
+      );
+      console.log(
+        "[Popup] Custom sections count before download:",
+        state.tailoredResume.customSections
+          ? Object.keys(state.tailoredResume.customSections).length
+          : 0,
+      );
 
       // Download as DOCX
       await downloadResume(

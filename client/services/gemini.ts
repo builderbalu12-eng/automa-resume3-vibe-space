@@ -1,6 +1,91 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ResumeData, JobDescription, ATSScore } from "@/types";
-import { getApiKeyFromSettings } from "@/utils/storage";
+import { getApiKeyFromSettings, getSettings } from "@/utils/storage";
+
+// Retry utility with exponential backoff
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = 3,
+  initialDelayMs: number = 1000,
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMsg = lastError.message;
+
+      // Only retry on 503 (overloaded) or 429 (rate limit) errors
+      if (!errorMsg.includes("503") && !errorMsg.includes("429")) {
+        throw lastError;
+      }
+
+      if (attempt < maxAttempts) {
+        const delayMs = initialDelayMs * Math.pow(2, attempt - 1);
+        console.log(
+          `API overloaded (attempt ${attempt}/${maxAttempts}). Retrying in ${delayMs}ms...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error("Max retry attempts exceeded");
+}
+
+// Calculate ATS score by comparing resume skills with job skills
+export function calculateATSScore(
+  resume: ResumeData,
+  jobDescription: JobDescription,
+): ATSScore {
+  // Normalize all skills to lowercase for comparison
+  const resumeSkillsLower = resume.skills.map((s) => s.toLowerCase());
+  const jobSkillsLower = jobDescription.skills.map((s) => s.toLowerCase());
+
+  // Combine resume skills with experience and education text
+  const resumeText = `${resume.summary || ""} ${resume.skills.join(" ")} ${
+    resume.experience
+      .map((e) => `${e.title} ${e.company} ${e.description.join(" ")}`)
+      .join(" ") || ""
+  } ${resume.education.map((e) => `${e.degree} ${e.field}`).join(" ") || ""} ${
+    resume.projects
+      ?.map((p) => `${p.title} ${p.technologies.join(" ")}`)
+      .join(" ") || ""
+  }`.toLowerCase();
+
+  const jobText =
+    `${jobDescription.description || ""} ${jobDescription.requirements.join(" ")} ${jobDescription.skills.join(" ")}`.toLowerCase();
+
+  // Find matching keywords
+  const matchedKeywords: string[] = [];
+  const missingKeywords: string[] = [];
+
+  for (const skill of jobSkillsLower) {
+    if (resumeSkillsLower.includes(skill) || resumeText.includes(skill)) {
+      matchedKeywords.push(skill);
+    } else {
+      missingKeywords.push(skill);
+    }
+  }
+
+  // Calculate score based on matches
+  const matchPercentage =
+    jobSkillsLower.length > 0
+      ? Math.round((matchedKeywords.length / jobSkillsLower.length) * 100)
+      : 50;
+
+  return {
+    score: Math.min(100, Math.max(0, matchPercentage)),
+    matchPercentage,
+    keywordMatches: matchedKeywords,
+    missingKeywords,
+    improvements: missingKeywords
+      .slice(0, 3)
+      .map((k) => `Add ${k} to your resume if you have experience with it`),
+  };
+}
 
 let GEMINI_API_KEY = "";
 
@@ -413,22 +498,24 @@ export async function extractJobRequirements(
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  const prompt = `Extract structured information from this job description. Return JSON with this format:
-  {
-    "title": "job title",
-    "company": "company name",
-    "location": "location",
-    "requirements": ["requirement 1", "requirement 2", ...],
-    "skills": ["skill 1", "skill 2", ...]
-  }
-  
-  Job Description:
-  ${jobDescription}`;
+  const prompt = `Extract job info from this description:
+${jobDescription}
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+Return ONLY valid JSON:
+{
+  "title": "job title",
+  "company": "company name",
+  "location": "location",
+  "requirements": ["requirement1", "requirement2"],
+  "skills": ["skill1", "skill2"]
+}`;
 
   try {
+    const text = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    });
+
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -449,6 +536,7 @@ export async function extractJobRequirements(
 export async function tailorResumeForJob(
   masterResume: ResumeData,
   jobDescription: JobDescription,
+  configuredSections?: string[],
 ): Promise<ResumeData> {
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -468,50 +556,42 @@ export async function tailorResumeForJob(
       ? jobDescription.description.substring(0, 300)
       : "");
 
-  const prompt = `You are an expert resume optimizer. Tailor this resume to match this specific job posting.
+  const prompt = `Tailor this resume for maximum impact for: ${jobDescription.title} at ${jobDescription.company}
 
-  TARGET JOB:
-  - Title: ${jobDescription.title}
-  - Company: ${jobDescription.company}
-  - Required Skills: ${jobSkills}
-  - Requirements: ${jobRequirements}
+Job details:
+- Title: ${jobDescription.title}
+- Company: ${jobDescription.company}
+- Required Skills: ${jobSkills}
+- Key Requirements: ${jobRequirements}
 
-  ORIGINAL RESUME:
-  - Name: ${masterResume.contact.name}
-  - Summary: ${masterResume.summary || "Professional with relevant experience"}
-  - All Skills: ${masterResume.skills.join(", ")}
+Resume:
+- Name: ${masterResume.contact.name}
+- Skills: ${masterResume.skills.join(", ")}
+- Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+${masterResume.projects && masterResume.projects.length > 0 ? `- Projects: ${masterResume.projects.map((p) => `${p.title} (${p.technologies?.join(", ")})`).join(" | ")}` : ""}
 
-  - Experience:
-  ${masterResume.experience.map((e, i) => `${i + 1}. ${e.title} at ${e.company} (${e.startDate}${e.endDate ? ` - ${e.endDate}` : ""}): ${e.description.join(" ")}`).join("\n\n")}
+Return ONLY valid JSON with enhanced content aligned to job requirements:
+{
+  "tailoredSummary": "2-3 sentence summary highlighting most relevant experience for this specific role",
+  "tailoredExperience": [{"jobTitle": "original job title", "newBullets": ["impact-driven bullet with metrics", "bullet emphasizing job-relevant skills"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "3-4 sentences describing project impact, technologies used that match job requirements, and measurable results"}],
+  "recommendedSkillsOrder": ["most relevant skill to job", "second most relevant skill"]
+}
 
-  TASK: Create a tailored version that:
-  1. Rewrites the professional summary to highlight relevant experience for THIS job
-  2. Reorders and rewrites experience bullets to emphasize skills matching the job
-  3. Uses keywords from the job description naturally
-  4. Maintains ATS-friendly formatting (standard keywords, no special characters)
-  5. Keeps achievements and quantifiable results that are relevant
-
-  Return ONLY a valid JSON object (no markdown, no code blocks):
-  {
-    "tailoredSummary": "2-3 sentence professional summary tailored for this specific job, highlighting most relevant experience",
-    "tailoredExperience": [
-      {"jobTitle": "job title from original resume", "newBullets": ["tailored bullet point 1", "tailored bullet point 2", "tailored bullet point 3"]},
-      {"jobTitle": "another job title", "newBullets": ["bullet 1", "bullet 2"]}
-    ],
-    "recommendedSkillsOrder": ["most relevant skill 1", "relevant skill 2", "skill 3"]
-  }`;
+Important for projects: Provide 3-4 detailed sentences describing the project's impact, the technologies used (especially those mentioned in job posting), and quantified results where applicable.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-
-    console.log("Tailor response received, length:", text.length);
+    // Main tailor prompt with retry logic
+    const mainResult = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    });
 
     let parsed;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(mainResult);
     } catch (e) {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonMatch = mainResult.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]);
       } else {
@@ -534,6 +614,20 @@ export async function tailorResumeForJob(
               : exp.description,
         };
       }),
+      projects: masterResume.projects?.map((proj) => {
+        const tailored = parsed.tailoredProjects?.find(
+          (t: any) => t.title?.toLowerCase() === proj.title.toLowerCase(),
+        );
+        return {
+          ...proj,
+          description:
+            tailored?.newDescription &&
+            typeof tailored.newDescription === "string" &&
+            tailored.newDescription.trim()
+              ? tailored.newDescription
+              : proj.description,
+        };
+      }),
       skills:
         parsed.recommendedSkillsOrder &&
         Array.isArray(parsed.recommendedSkillsOrder)
@@ -543,129 +637,84 @@ export async function tailorResumeForJob(
           : masterResume.skills,
     };
 
-    return tailoredResume;
-  } catch (error) {
-    console.error("Error tailoring resume:", error);
-    // Return original resume if tailoring fails
-    return masterResume;
+    // Generate all custom sections in ONE API call (batch) instead of multiple calls
+    if (configuredSections && configuredSections.length > 0) {
+      const sectionsTemplate = configuredSections
+        .map(
+          (section) =>
+            `"${section}": "3-4 sentences relevant to ${jobDescription.title}"`,
+        )
+        .join(", ");
+
+      const customSectionsPrompt = `Generate compelling custom resume sections tailored to this job opportunity.
+
+Job: ${jobDescription.title} at ${jobDescription.company}
+Required Skills: ${jobSkills}
+Candidate: ${masterResume.contact.name}
+Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+Education: ${masterResume.education.map((e) => `${e.degree} in ${e.field}`).join(" | ")}
+
+Generate 3-4 sentence content for each section that directly relates to the job requirements and showcases the candidate's relevant strengths:
+
+Return ONLY valid JSON:
+{
+  "sections": {
+    ${sectionsTemplate}
   }
 }
 
-export async function calculateATSScore(
-  resume: ResumeData,
-  jobDescription: JobDescription,
-): Promise<ATSScore> {
-  const genAI = await initGemini();
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+Requirements:
+- Each section should contain 3-4 substantial sentences (not generic text)
+- Content must be specific to the candidate's background and the job requirements
+- Use concrete examples from their experience where applicable
+- Avoid placeholder text or generic resume language`;
 
-  const resumeText = [
-    resume.contact.name,
-    resume.summary || "Professional",
-    "Skills: " + resume.skills.join(", "),
-    "Experience: " +
-      resume.experience
-        .map((e) => `${e.title} at ${e.company}: ${e.description.join(" ")}`)
-        .join(" | "),
-    "Education: " +
-      resume.education
-        .map((e) => `${e.degree} in ${e.field} from ${e.institution}`)
-        .join(" | "),
-  ].join("\n");
+      try {
+        const customResult = await retryWithBackoff(async () => {
+          const result = await model.generateContent(customSectionsPrompt);
+          return result.response.text().trim();
+        });
 
-  const jobText = [
-    `Job: ${jobDescription.title} at ${jobDescription.company}`,
-    `Skills needed: ${jobDescription.skills.join(", ")}`,
-    `Requirements: ${jobDescription.requirements.join(", ")}`,
-    `Description: ${jobDescription.description ? jobDescription.description.substring(0, 500) : ""}`,
-  ].join("\n");
+        let customParsed;
+        try {
+          customParsed = JSON.parse(customResult);
+        } catch (e) {
+          const jsonMatch = customResult.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            customParsed = JSON.parse(jsonMatch[0]);
+          }
+        }
 
-  const prompt = `Analyze how well this resume matches the job posting for ATS (Applicant Tracking System) screening.
-
-  RESUME:
-  ${resumeText}
-
-  JOB POSTING:
-  ${jobText}
-
-  Evaluate the match and return ONLY a valid JSON object (no markdown):
-  {
-    "score": number between 0-100 (how likely ATS will rank it high),
-    "matchPercentage": number between 0-100 (percentage of job requirements matched),
-    "matchedKeywords": ["keyword matched 1", "keyword matched 2", "keyword matched 3"],
-    "missingKeywords": ["important missing keyword 1", "missing keyword 2"],
-    "improvements": ["specific improvement 1", "specific improvement 2", "specific improvement 3"]
-  }
-
-  Be honest and practical in your assessment.`;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-
-    console.log("ATS Score response received, length:", text.length);
-
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (e) {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No valid JSON in response");
+        if (customParsed?.sections) {
+          const customSections: Record<string, string> = {};
+          for (const [sectionName, content] of Object.entries(
+            customParsed.sections,
+          )) {
+            const contentStr = String(content).trim();
+            if (contentStr && contentStr.length > 0 && contentStr !== "null") {
+              customSections[sectionName] = contentStr;
+            }
+          }
+          if (Object.keys(customSections).length > 0) {
+            tailoredResume.customSections = customSections;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to generate custom sections:", err);
       }
     }
 
-    return {
-      score: Math.min(100, Math.max(0, parsed.score || 0)),
-      matchPercentage: Math.min(100, Math.max(0, parsed.matchPercentage || 0)),
-      keywordMatches: (Array.isArray(parsed.matchedKeywords)
-        ? parsed.matchedKeywords
-        : []
-      ).filter((k: string) => k && k.trim()),
-      missingKeywords: (Array.isArray(parsed.missingKeywords)
-        ? parsed.missingKeywords
-        : []
-      ).filter((k: string) => k && k.trim()),
-      improvements: (Array.isArray(parsed.improvements)
-        ? parsed.improvements
-        : []
-      ).filter((i: string) => i && i.trim()),
-    };
+    return tailoredResume;
   } catch (error) {
-    console.error("Error calculating ATS score:", error);
-
-    // Fallback: simple keyword matching
-    const resumeStr = resumeText.toLowerCase();
-    const jobKeywords = [
-      ...jobDescription.skills,
-      ...jobDescription.requirements,
-    ].map((k) => k.toLowerCase());
-
-    const matches = jobKeywords.filter((k) => resumeStr.includes(k));
-    const matchPercentage = Math.round(
-      (matches.length / jobKeywords.length) * 100,
-    );
-
-    return {
-      score: Math.max(30, matchPercentage),
-      matchPercentage: matchPercentage,
-      keywordMatches: matches.slice(0, 5),
-      missingKeywords: jobKeywords
-        .filter((k) => !resumeStr.includes(k))
-        .slice(0, 5),
-      improvements: [
-        "Add more relevant keywords from the job description",
-        "Include specific technical skills mentioned in the job posting",
-        "Quantify achievements with metrics and numbers",
-      ],
-    };
+    console.error("Error tailoring resume:", error);
+    return masterResume;
   }
 }
 
 export async function analyzeJobAndTailorResume(
   pageHTML: string,
   masterResume: ResumeData,
+  configuredSections?: string[],
 ): Promise<TailoredResumeResult> {
   const genAI = await initGemini();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -697,77 +746,56 @@ export async function analyzeJobAndTailorResume(
         institution: e.institution,
         graduation: e.graduationDate,
       })),
+      projects: masterResume.projects?.map((p) => ({
+        title: p.title,
+        description: p.description,
+        technologies: p.technologies,
+      })),
     },
     null,
     2,
   );
 
-  const prompt = `You are an expert resume optimizer and job analyst.
+  const prompt = `Extract job details and tailor resume for maximum ATS matching. Return valid JSON:
+{
+  "jobTitle": "title",
+  "company": "company",
+  "location": "location or 'Not specified'",
+  "jobDescription": "full job description from page",
+  "requirements": ["requirement1", "requirement2"],
+  "skills": ["skill1", "skill2"],
+  "tailoredSummary": "2-3 sentence summary emphasizing relevant experience for this specific job",
+  "tailoredExperience": [{"position": "original job title", "newBullets": ["bullet1 with metrics", "bullet2 with keywords"]}],
+  "tailoredProjects": [{"title": "project title", "newDescription": "3-4 sentences describing project impact, technologies used relevant to job, and measurable results"}],
+  "tailoredSkillsOrder": ["most relevant skill", "second most relevant"],
+  "atsScore": 0-100,
+  "atsMatchPercentage": 0-100,
+  "matchedKeywords": ["keyword1", "keyword2"],
+  "missingKeywords": ["keyword1"],
+  "improvements": ["improvement1"],
+  "jobSummary": "summary with match percentage"
+}
 
-TASK:
-1. Extract job posting details from the page content
-2. Tailor the provided resume for this specific job
-3. Calculate ATS match score
+Instructions:
+- Extract ALL job skills and requirements from the posting
+- Calculate ATS score (0-100) based on skill and keyword matches
+- For tailoredProjects: provide 3-4 detailed sentences describing project impact, relevant technologies, and quantified results
+- For tailoredExperience: write impact-driven bullets with metrics where possible
+- Order skills by relevance to job posting
 
-PAGE CONTENT (job posting):
+Job posting:
 ${cleanHTML}
 
-MASTER RESUME:
-${resumeText}
-
-INSTRUCTIONS:
-1. EXTRACT JOB DETAILS from the page content:
-   - Find job title (exact position name)
-   - Find company name
-   - Find location if available
-   - Extract key responsibilities and requirements
-   - Extract required technical skills
-   - Extract years of experience required if mentioned
-
-2. TAILOR THE RESUME:
-   - Rewrite professional summary to highlight most relevant experience for THIS job
-   - Reorder experience entries by relevance to job requirements
-   - Rewrite 3-4 bullet points for each relevant job position to match job keywords
-   - Reorder skills list to prioritize job-required skills first
-   - Maintain ATS-friendly formatting (no special characters, standard text)
-   - Keep quantifiable achievements that are relevant to this job
-
-3. CALCULATE ATS SCORE:
-   - Rate how well the tailored resume matches the job (0-100)
-   - Identify which keywords/skills matched
-   - List missing important keywords
-   - Suggest improvements
-
-4. CREATE SUMMARY:
-   - Write a short 2-3 sentence summary of the job and match
-
-Return ONLY valid JSON (no markdown, no explanations):
-{
-  "jobTitle": "extracted job title",
-  "company": "extracted company name",
-  "location": "location or 'Not specified'",
-  "jobDescription": "comprehensive job description combining responsibilities and requirements",
-  "requirements": ["requirement 1", "requirement 2", ...],
-  "skills": ["skill 1", "skill 2", ...],
-  "tailoredSummary": "2-3 sentence professional summary tailored for this job",
-  "tailoredExperience": [
-    {"position": "exact job title from resume", "newBullets": ["bullet 1", "bullet 2", "bullet 3"]},
-    ...
-  ],
-  "tailoredSkillsOrder": ["most relevant skill", "skill 2", ...],
-  "atsScore": number between 0-100,
-  "atsMatchPercentage": number between 0-100,
-  "matchedKeywords": ["keyword 1", "keyword 2", ...],
-  "missingKeywords": ["missing keyword 1", ...],
-  "improvements": ["improvement 1", "improvement 2", ...],
-  "jobSummary": "2-3 sentence summary of the job and how well the resume matches"
-}`;
+Resume:
+${resumeText}`;
 
   try {
     console.log("[Gemini] Analyzing job and tailoring resume...");
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = await retryWithBackoff(async () => {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    });
 
     console.log("[Gemini] Response received, parsing...");
 
@@ -819,6 +847,23 @@ Return ONLY valid JSON (no markdown, no explanations):
               : exp.description,
         };
       }),
+      projects: masterResume.projects?.map((proj) => {
+        const tailored = Array.isArray(parsed.tailoredProjects)
+          ? parsed.tailoredProjects.find(
+              (t: any) => t.title?.toLowerCase() === proj.title.toLowerCase(),
+            )
+          : null;
+
+        return {
+          ...proj,
+          description:
+            tailored?.newDescription &&
+            typeof tailored.newDescription === "string" &&
+            tailored.newDescription.trim()
+              ? tailored.newDescription
+              : proj.description,
+        };
+      }),
       skills: Array.isArray(parsed.tailoredSkillsOrder)
         ? parsed.tailoredSkillsOrder.filter((s: string) =>
             masterResume.skills.some(
@@ -828,7 +873,153 @@ Return ONLY valid JSON (no markdown, no explanations):
         : masterResume.skills,
     };
 
-    // Build ATS score
+    // Get configured custom sections from settings and generate them
+    let sectionsToGenerate = configuredSections;
+
+    console.log(
+      "[Gemini] analyzeJobAndTailorResume - Received configuredSections:",
+      JSON.stringify(configuredSections),
+    );
+    console.log(
+      "[Gemini] configuredSections type:",
+      Array.isArray(configuredSections) ? "array" : typeof configuredSections,
+    );
+    console.log(
+      "[Gemini] configuredSections length:",
+      configuredSections ? configuredSections.length : "null",
+    );
+
+    // If not provided as parameter, try to load from settings
+    if (!sectionsToGenerate || sectionsToGenerate.length === 0) {
+      console.log(
+        "[Gemini] No sections from parameter, trying to load from settings...",
+      );
+      let appSettings: any = null;
+      try {
+        appSettings = await getSettings();
+        console.log(
+          "[Gemini] Settings loaded from storage:",
+          JSON.stringify(appSettings),
+        );
+      } catch (e) {
+        console.error(
+          "[Gemini] Error loading settings for custom sections:",
+          e,
+        );
+      }
+      sectionsToGenerate = appSettings?.resumeContentSections || [];
+      console.log(
+        "[Gemini] Sections from settings:",
+        JSON.stringify(sectionsToGenerate),
+      );
+    }
+
+    console.log(
+      "[Gemini] Final sectionsToGenerate:",
+      JSON.stringify(sectionsToGenerate),
+    );
+    console.log(
+      "[Gemini] sectionsToGenerate length:",
+      sectionsToGenerate ? sectionsToGenerate.length : 0,
+    );
+
+    if (sectionsToGenerate && sectionsToGenerate.length > 0) {
+      console.log(
+        "[Gemini] Generating custom sections:",
+        JSON.stringify(sectionsToGenerate),
+      );
+
+      const jobSkills = Array.isArray(jobData.skills)
+        ? jobData.skills.join(", ")
+        : "";
+
+      const sectionsTemplate = sectionsToGenerate
+        .map(
+          (section) =>
+            `"${section}": "3-4 sentences relevant to ${jobData.title}"`,
+        )
+        .join(", ");
+
+      const customSectionsPrompt = `Generate compelling resume content for custom sections tailored to this job opportunity.
+
+Job: ${jobData.title} at ${jobData.company}
+Skills needed: ${jobSkills}
+Job requirements: ${Array.isArray(jobData.requirements) ? jobData.requirements.join(", ") : ""}
+Candidate: ${masterResume.contact.name}
+Experience: ${masterResume.experience.map((e) => `${e.title} at ${e.company}`).join(" | ")}
+Education: ${masterResume.education.map((e) => `${e.degree} in ${e.field}`).join(" | ")}
+
+Generate 3-4 sentence content for each section that aligns with the job requirements and showcases relevant experience:
+
+Return ONLY valid JSON:
+{
+  "sections": {
+    ${sectionsTemplate}
+  }
+}
+
+Important: Each section content should be specific, substantial (3-4 sentences), and demonstrate how the candidate's background aligns with the job requirements.`;
+
+      try {
+        const customResult = await retryWithBackoff(async () => {
+          const result = await model.generateContent(customSectionsPrompt);
+          return result.response.text().trim();
+        });
+
+        let customParsed;
+        try {
+          customParsed = JSON.parse(customResult);
+        } catch (e) {
+          const jsonMatch = customResult.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            customParsed = JSON.parse(jsonMatch[0]);
+          }
+        }
+
+        if (customParsed?.sections) {
+          console.log(
+            "[Gemini] Parsed custom sections:",
+            JSON.stringify(customParsed.sections),
+          );
+          const customSections: Record<string, string> = {};
+          for (const [sectionName, content] of Object.entries(
+            customParsed.sections,
+          )) {
+            const contentStr = String(content).trim();
+            if (contentStr && contentStr.length > 0 && contentStr !== "null") {
+              customSections[sectionName] = contentStr;
+              console.log(
+                `[Gemini] Added custom section "${sectionName}": ${contentStr.substring(0, 100)}...`,
+              );
+            }
+          }
+          console.log(
+            "[Gemini] Total custom sections added:",
+            Object.keys(customSections).length,
+          );
+          if (Object.keys(customSections).length > 0) {
+            tailoredResume.customSections = customSections;
+            console.log(
+              "[Gemini] ✓ Custom sections assigned to tailoredResume:",
+              JSON.stringify(customSections),
+            );
+          }
+        } else {
+          console.warn(
+            "[Gemini] customParsed has no sections property:",
+            JSON.stringify(customParsed),
+          );
+        }
+      } catch (err) {
+        console.error("[Gemini] Failed to generate custom sections:", err);
+      }
+    } else {
+      console.log(
+        "[Gemini] Skipping custom section generation - no sections configured",
+      );
+    }
+
+    // Build ATS score for tailored resume
     const atsScore: ATSScore = {
       score: Math.min(100, Math.max(0, parsed.atsScore || 0)),
       matchPercentage: Math.min(
@@ -849,6 +1040,11 @@ Return ONLY valid JSON (no markdown, no explanations):
       ).filter((i: string) => i && i.trim()),
     };
 
+    // Calculate ATS score for master resume
+    const masterAtsScore = calculateATSScore(masterResume, jobData);
+    console.log("[Gemini] Master resume ATS score:", masterAtsScore.score, "%");
+    console.log("[Gemini] Tailored resume ATS score:", atsScore.score, "%");
+
     const summary =
       parsed.jobSummary ||
       `Match: ${atsScore.score}% for ${jobData.title} at ${jobData.company}`;
@@ -857,6 +1053,7 @@ Return ONLY valid JSON (no markdown, no explanations):
       jobData,
       tailoredResume,
       atsScore,
+      masterAtsScore,
       summary,
     };
   } catch (error) {

@@ -131,15 +131,21 @@ export const TailorResume: React.FC = () => {
       // Extract job requirements from JD
       const extracted = await extractJobRequirements(jobDescription);
 
-      // Tailor the resume
-      const tailored = await tailorResumeForJob(masterResume, extracted);
-
-      // Calculate ATS score
-      const atsData = await calculateATSScore(tailored, extracted);
-
-      // Check for missing sections if configured sections exist
+      // Get configured sections from settings
       const appSettings = await getSettings();
       const configuredSections = appSettings?.resumeContentSections || [];
+
+      // Tailor the resume with configured sections
+      const tailored = await tailorResumeForJob(
+        masterResume,
+        extracted,
+        configuredSections,
+      );
+
+      // Calculate ATS score
+      const atsData = calculateATSScore(tailored, extracted);
+
+      // Check for missing sections if configured sections exist
       const missing = checkMissingContentSections(tailored, configuredSections);
 
       setTailorState({
@@ -517,7 +523,7 @@ Then re-enable the extension and try again.`,
                     Tailoring...
                   </>
                 ) : (
-                  <>⚡ Tailor Resume</>
+                  <>�� Tailor Resume</>
                 )}
               </button>
             </div>
@@ -548,6 +554,30 @@ Then re-enable the extension and try again.`,
                       </p>
                     </div>
                   )}
+
+                  {tailorState.tailored.customSections &&
+                    Object.keys(tailorState.tailored.customSections).length >
+                      0 && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-sm font-semibold text-primary mb-2">
+                          Custom Sections Generated:
+                        </p>
+                        <div className="space-y-2">
+                          {Object.entries(
+                            tailorState.tailored.customSections,
+                          ).map(([sectionName, content]) => (
+                            <div key={sectionName} className="text-xs">
+                              <p className="font-medium text-foreground">
+                                {sectionName}
+                              </p>
+                              <p className="text-muted-foreground line-clamp-2">
+                                {content}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                   <div className="flex gap-3">
                     <button

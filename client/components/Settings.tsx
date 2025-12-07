@@ -58,7 +58,39 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         return;
       }
 
+      console.log("[Settings] Saving settings:", settings);
+
+      // Save to local storage first
       await setSettings(settings);
+      console.log("[Settings] Settings saved to local storage");
+
+      // Try to save to chrome.storage.sync via the extension content script
+      // The web app on localhost uses window.postMessage to communicate with the content script
+      try {
+        console.log(
+          "[Settings] Attempting to save settings to chrome.storage via content script...",
+        );
+
+        // Send message to content script via window.postMessage
+        window.postMessage(
+          {
+            action: "saveSettings",
+            settings: settings,
+            source: "resumematch-web-app",
+          },
+          "*",
+        );
+
+        console.log(
+          "[Settings] ✓ Settings sent to content script (async - will save to chrome.storage.sync)",
+        );
+      } catch (e) {
+        console.warn(
+          "[Settings] Could not send settings to content script:",
+          e,
+        );
+      }
+
       setSaveSuccess(true);
 
       // Show processing message if user added custom sections

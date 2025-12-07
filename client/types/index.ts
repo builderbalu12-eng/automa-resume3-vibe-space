@@ -46,6 +46,7 @@ export interface ResumeData {
   achievements?: string[];
   publications?: string[];
   hobbies?: string[];
+  customSections?: Record<string, string>;
 }
 
 export interface JobDescription {
