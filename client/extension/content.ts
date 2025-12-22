@@ -5,8 +5,173 @@ import {
 
 let injectedButton = false;
 
+// Listen for messages from the background script
+// All data extraction is initiated by explicit user action through the popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("[Content Script] Received message:", request.action);
+
+  if (request.action === "getResume") {
+    // Send resume from chrome.storage.sync
+    console.log("[Content Script] getResume requested");
+    chrome.storage.sync.get(["resumematch_master_resume"], (result) => {
+      try {
+        const resumeData = result["resumematch_master_resume"];
+        console.log(
+          "[Content Script] chrome.storage.sync returned:",
+          resumeData ? `Data found (${typeof resumeData})` : "NO DATA",
+        );
+
+        if (resumeData) {
+          try {
+            const parsed =
+              typeof resumeData === "string"
+                ? JSON.parse(resumeData)
+                : resumeData;
+            console.log(
+              "[Content Script] ✓ Sending resume from chrome.storage:",
+              parsed.contact?.name,
+            );
+            sendResponse({ resume: parsed });
+          } catch (parseError) {
+            console.error(
+              "[Content Script] Failed to parse chrome.storage resume:",
+              parseError,
+            );
+            // Try localStorage as fallback
+            const localResume = localStorage.getItem(
+              "resumematch_master_resume",
+            );
+            if (localResume) {
+              const parsed = JSON.parse(localResume);
+              console.log(
+                "[Content Script] ✓ Sending resume from localStorage (chrome.storage parse failed):",
+                parsed.contact?.name,
+              );
+              sendResponse({ resume: parsed });
+            } else {
+              console.warn("[Content Script] No resume found in any storage");
+              sendResponse({ resume: null });
+            }
+          }
+        } else {
+          // Try localStorage as fallback
+          console.log(
+            "[Content Script] No resume in chrome.storage, checking localStorage...",
+          );
+          const localResume = localStorage.getItem("resumematch_master_resume");
+          if (localResume) {
+            const parsed = JSON.parse(localResume);
+            console.log(
+              "[Content Script] ✓ Sending resume from localStorage:",
+              parsed.contact?.name,
+            );
+            sendResponse({ resume: parsed });
+          } else {
+            console.warn(
+              "[Content Script] No resume found in chrome.storage or localStorage",
+            );
+            sendResponse({ resume: null });
+          }
+        }
+      } catch (e) {
+        console.error("[Content Script] Error getting resume:", e);
+        sendResponse({ resume: null, error: (e as Error).message });
+      }
+    });
+    return true; // Will respond asynchronously
+  } else if (request.action === "injectButton") {
+    // Inject button only when explicitly requested
+    console.log("[Content Script] Received inject button request");
+    injectButton();
+    sendResponse({ success: true });
+  } else if (request.action === "analyzeCurrentPage") {
+    // Capture page content on explicit request
+    console.log("[Content Script] Received analyzeCurrentPage request");
+    try {
+      const pageHTML = document.documentElement.outerHTML;
+      const pageURL = window.location.href;
+      chrome.runtime.sendMessage(
+        { action: "analyzeJob", pageHTML, pageURL },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Content Script] Error forwarding analyzeJob:",
+              chrome.runtime.lastError.message,
+            );
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError.message,
+            });
+          } else {
+            sendResponse({ success: Boolean(response?.success) });
+          }
+        },
+      );
+    } catch (e) {
+      console.error("[Content Script] Failed to capture page:", e);
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    return true; // async response
+  } else if (request.action === "syncApplications") {
+    // Sync applications to localStorage
+    console.log("[Content Script] Syncing applications to localStorage");
+    try {
+      const apps = Array.isArray(request.apps) ? request.apps : [];
+      localStorage.setItem("resumematch_applications", JSON.stringify(apps));
+      sendResponse({ success: true });
+    } catch (e) {
+      console.error("[Content Script] Failed to sync applications:", e);
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    return true;
+  } else if (request.action === "saveSettings") {
+    // Relay settings to background script
+    console.log(
+      "[Content Script] Received saveSettings request, relaying to background script",
+    );
+    try {
+      chrome.runtime.sendMessage(
+        {
+          action: "saveSettings",
+          settings: request.settings,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "[Content Script] Error relaying saveSettings:",
+              chrome.runtime.lastError.message,
+            );
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError.message,
+            });
+          } else {
+            console.log(
+              "[Content Script] ✓ Settings relayed successfully to background script",
+            );
+            sendResponse(response || { success: true });
+          }
+        },
+      );
+    } catch (e) {
+      console.error("[Content Script] Failed to relay settings:", e);
+      sendResponse({
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    return true; // async response
+  }
+});
+
 // Listen for messages from the web app via window.postMessage
-// This allows the web app (localhost) to communicate with the extension
+// This allows the web app to communicate with the extension
 window.addEventListener("message", (event) => {
   // Only accept messages from our web app
   if (event.source !== window) return;
@@ -165,187 +330,6 @@ function injectButton() {
   }
 }
 
-// Inject button when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", injectButton);
-} else {
-  // DOM already loaded
-  setTimeout(injectButton, 100);
-}
-
-// Also inject on dynamically loaded content
-const observer = new MutationObserver(() => {
-  if (!injectedButton && !document.getElementById("resumematch-extract-btn")) {
-    injectButton();
-  }
-});
-
-// Start observing after a short delay
-setTimeout(() => {
-  observer.observe(document.body, {
-    childList: true,
-    subtree: false,
-    attributes: false,
-  });
-}, 500);
-
-// Listen for messages from background or popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("[Content Script] Received message:", request.action);
-
-  if (request.action === "getResume") {
-    // Send resume from chrome.storage.sync
-    console.log("[Content Script] getResume requested");
-    chrome.storage.sync.get(["resumematch_master_resume"], (result) => {
-      try {
-        const resumeData = result["resumematch_master_resume"];
-        console.log(
-          "[Content Script] chrome.storage.sync returned:",
-          resumeData ? `Data found (${typeof resumeData})` : "NO DATA",
-        );
-
-        if (resumeData) {
-          try {
-            const parsed =
-              typeof resumeData === "string"
-                ? JSON.parse(resumeData)
-                : resumeData;
-            console.log(
-              "[Content Script] ✓ Sending resume from chrome.storage:",
-              parsed.contact?.name,
-            );
-            sendResponse({ resume: parsed });
-          } catch (parseError) {
-            console.error(
-              "[Content Script] Failed to parse chrome.storage resume:",
-              parseError,
-            );
-            // Try localStorage as fallback
-            const localResume = localStorage.getItem(
-              "resumematch_master_resume",
-            );
-            if (localResume) {
-              const parsed = JSON.parse(localResume);
-              console.log(
-                "[Content Script] ✓ Sending resume from localStorage (chrome.storage parse failed):",
-                parsed.contact?.name,
-              );
-              sendResponse({ resume: parsed });
-            } else {
-              console.warn("[Content Script] No resume found in any storage");
-              sendResponse({ resume: null });
-            }
-          }
-        } else {
-          // Try localStorage as fallback
-          console.log(
-            "[Content Script] No resume in chrome.storage, checking localStorage...",
-          );
-          const localResume = localStorage.getItem("resumematch_master_resume");
-          if (localResume) {
-            const parsed = JSON.parse(localResume);
-            console.log(
-              "[Content Script] ✓ Sending resume from localStorage:",
-              parsed.contact?.name,
-            );
-            sendResponse({ resume: parsed });
-          } else {
-            console.warn(
-              "[Content Script] No resume found in chrome.storage or localStorage",
-            );
-            sendResponse({ resume: null });
-          }
-        }
-      } catch (e) {
-        console.error("[Content Script] Error getting resume:", e);
-        sendResponse({ resume: null, error: (e as Error).message });
-      }
-    });
-    return true; // Will respond asynchronously
-  } else if (request.action === "injectButton") {
-    console.log("[Content Script] Received inject button request");
-    injectButton();
-    sendResponse({ success: true });
-  } else if (request.action === "analyzeCurrentPage") {
-    console.log("[Content Script] Received analyzeCurrentPage request");
-    try {
-      const pageHTML = document.documentElement.outerHTML;
-      const pageURL = window.location.href;
-      chrome.runtime.sendMessage(
-        { action: "analyzeJob", pageHTML, pageURL },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "[Content Script] Error forwarding analyzeJob:",
-              chrome.runtime.lastError.message,
-            );
-            sendResponse({
-              success: false,
-              error: chrome.runtime.lastError.message,
-            });
-          } else {
-            sendResponse({ success: Boolean(response?.success) });
-          }
-        },
-      );
-    } catch (e) {
-      console.error("[Content Script] Failed to capture page:", e);
-      sendResponse({
-        success: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-    return true; // async response
-  } else if (request.action === "syncApplications") {
-    console.log("[Content Script] Syncing applications to localStorage");
-    try {
-      const apps = Array.isArray(request.apps) ? request.apps : [];
-      localStorage.setItem("resumematch_applications", JSON.stringify(apps));
-      sendResponse({ success: true });
-    } catch (e) {
-      console.error("[Content Script] Failed to sync applications:", e);
-      sendResponse({
-        success: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-    return true;
-  } else if (request.action === "saveSettings") {
-    console.log(
-      "[Content Script] Received saveSettings request, relaying to background script",
-    );
-    try {
-      // Relay the settings to the background script
-      chrome.runtime.sendMessage(
-        {
-          action: "saveSettings",
-          settings: request.settings,
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "[Content Script] Error relaying saveSettings:",
-              chrome.runtime.lastError.message,
-            );
-            sendResponse({
-              success: false,
-              error: chrome.runtime.lastError.message,
-            });
-          } else {
-            console.log(
-              "[Content Script] ✓ Settings relayed successfully to background script",
-            );
-            sendResponse(response || { success: true });
-          }
-        },
-      );
-    } catch (e) {
-      console.error("[Content Script] Failed to relay settings:", e);
-      sendResponse({
-        success: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-    return true; // async response
-  }
-});
+console.log(
+  "[Content Script] Loaded and ready to accept messages from popup/background",
+);

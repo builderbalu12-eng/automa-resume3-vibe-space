@@ -3,12 +3,17 @@
   "name": "ResumeMatch Pro",
   "version": "1.0.0",
   "description": "AI-powered resume tailoring for job applications",
-  "permissions": ["storage", "tabs", "scripting", "downloads"],
+  "permissions": ["storage", "scripting", "downloads"],
   "host_permissions": [
-    "https://*.zenlead.in/*",
-    "https://resume.zenlead.in/*",
-    "https://*/*",
-    "http://*/*"
+    "*://*.linkedin.com/*",
+    "*://*.naukri.com/*",
+    "*://*.indeed.com/*",
+    "*://*.monster.com/*",
+    "*://*.glassdoor.com/*",
+    "*://*.dice.com/*",
+    "*://*.ziprecruiter.com/*",
+    "*://*.builtin.com/*",
+    "*://resume.zenlead.in/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
@@ -20,20 +25,19 @@
     "default_popup": "popup.html",
     "default_title": "ResumeMatch Pro",
     "default_icons": {
-      "16": "favicon.ico",
-      "48": "favicon.ico",
-      "128": "favicon.ico"
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     }
   },
   "icons": {
-    "16": "favicon.ico",
-    "48": "favicon.ico",
-    "128": "favicon.ico"
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "content_scripts": [
     {
       "matches": [
-        "*://resume.zenlead.in/*",
         "*://*.linkedin.com/*",
         "*://*.naukri.com/*",
         "*://*.indeed.com/*",
@@ -42,17 +46,10 @@
         "*://*.dice.com/*",
         "*://*.ziprecruiter.com/*",
         "*://*.builtin.com/*",
-        "http://localhost:*/*",
-        "http://127.0.0.1:*/*"
+        "*://resume.zenlead.in/*"
       ],
       "js": ["content.js"],
-      "run_at": "document_end"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["popup.html"],
-      "matches": ["*://*/*"]
+      "run_at": "document_idle"
     }
   ]
 }
